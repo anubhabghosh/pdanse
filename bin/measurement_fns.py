@@ -31,7 +31,7 @@ def dist_sq_hfn(x):
 
 def get_measurement_fn(fn_name):
 
-    MEASUREMENT_FN_LIST = {
+    MEASUREMENT_FN_LIST = {    
         "identity":identity_hfn,
         "square": square_hfn,
         "cubic": cubic_hfn,

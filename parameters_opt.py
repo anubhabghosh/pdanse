@@ -685,8 +685,6 @@ def get_parameters(
             "mu_w": np.zeros((
                 n_states,
             )),
-            "gamma": 0.8,
-            "beta": 1.0,
             "measurement_fn_type":measurment_fn_type,
         },
         "Nonlinear1DSSM": {

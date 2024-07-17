@@ -6,7 +6,7 @@
 PYTHON="python3.8"
 
 # The number of i.i.d. trajectories each of length T that constitute the training data
-N=1000 
+N=1000
 
 # Length of each such training data trajectory, default it is set to T=1000
 T=100
@@ -17,10 +17,10 @@ T=100
 n_states=3
 
 # Number of observations in a dynamical system
-n_obs=2
+n_obs=3
 
-# Normalization flag
-normalize=false
+# Measurement function type
+h_fn_type="square"
 
 # dataset_type defines the type of dynamical system, the general terminology, e.g. for the Lorenz 63 system, 
 # the type is LorenzSSM, similarly for Chen and Rossler attractor we have ChenSSM and RosslerSSM respectively.
@@ -29,7 +29,7 @@ normalize=false
 # RosslerSSMrn${n_obs}, Lorenz96SSMrn${n_obs} with deterministic measurements: LorenzSSMn${n_obs}, ChenSSMn${n_obs}, 
 # RosslerSSMn${n_obs}, Lorenz96SSMn${n_obs}.
 # For the linear system, we have LinearSSM (can handle both full-rank, deterministic downsmapled case).
-dataset_type="LorenzSSMrn${n_obs}" #"RosslerSSMrn${n_obs}"
+dataset_type="LorenzSSM" #"RosslerSSMrn${n_obs}"
 
 # The name of the script for generating data with full path name
 script_name="./bin/generate_data.py"
@@ -41,7 +41,7 @@ output_path="./data/synthetic_data/"
 sigma_e2_dB=-10.0
 
 # For different signal-to-measurement-noise ratio (SMNRs), run the data generation 
-for smnr in 10.0
+for smnr in 0.0
 do
     ${PYTHON} ${script_name} \
     --n_states ${n_states} \
@@ -51,6 +51,6 @@ do
     --sigma_e2_dB $sigma_e2_dB \
     --smnr_dB $smnr \
     --dataset_type ${dataset_type} \
-    --normalize ${normalize} \
+    --h_fn_type ${h_fn_type} \
     --output_path ${output_path}
 done
