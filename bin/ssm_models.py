@@ -17,6 +17,78 @@ PARENT_DIR = path.dirname(path.dirname(path.abspath(__file__)))
 sys.path.append(PARENT_DIR)
 
 
+class LinearSSM(object):
+    def __init__(
+        self,
+        n_states=4,
+        n_obs=1,
+        delta=0.1,
+        measurement_fn_type="dist_sq",
+        decimate=False,
+        mu_e=None,
+        mu_w=None,
+    ):
+        self.n_states = n_states
+        self.n_obs = n_obs
+        self.delta = delta
+        self.measurement_fn_type = measurement_fn_type
+        self.mu_e = mu_e
+        self.mu_w = mu_w
+        self.h_fn = get_measurement_fn(fn_name=self.measurement_fn_type)
+        self.decimate = decimate
+        self.construct_F()
+        self.construct_H()
+
+    def setStateCov(self, sigma_e2=0.1):
+        self.Ce = sigma_e2 * torch.eye(self.n_states)
+
+    def setMeasurementCov(self, sigma_w2=1.0):
+        self.Cw = sigma_w2 * torch.eye(self.n_obs)
+
+    def construct_F(self):
+        self.F_mat = np.array(
+            [
+                [0.0, 0.0, self.delta, 0.0],
+                [0.0, 0.0, 0.0, self.delta],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+            ]
+        )
+
+    def construct_H(self):
+        self.H_mat = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+
+    def f_fn(self, x):
+        return self.F_mat @ x
+
+    def generate_state_sequence(self, T, sigma_e2_dB):
+        self.sigma_e2 = dB_to_lin(sigma_e2_dB)
+        self.setStateCov(sigma_e2=self.sigma_e2)
+        x_k_arr = np.zeros(T, self.n_states)
+        e_k_arr = np.random.multivariate_normal(mean=self.mu_w, cov=self.Cw, size=(T,))
+        for t in range(0, T - 1):
+            x_k_arr[t + 1] = self.f_fn(x_k_arr[t]) + e_k_arr[t]
+        return x_k_arr
+
+    def generate_measurement_sequence(self, x_k_arr, T, smnr_dB):
+        signal_power = np.var(self.h_fn(x_k_arr))
+        self.sigma_w2 = signal_power / dB_to_lin(smnr_dB)
+        self.setMeasurementCov(sigma_w2=self.sigma_w2)
+        w_k_arr = np.random.multivariate_normal(mean=self.mu_w, cov=self.Cw, size=(T,))
+        y_k_arr = np.zeros((T, self.n_obs))
+
+        for t in range(0, T):
+            y_k_arr[t] = self.h_fn(self.H_mat @ x_k_arr[t]) + w_k_arr[t]
+
+        return y_k_arr
+
+    def generate_single_sequence(self, T, sigma_e2_dB, smnr_dB):
+        x_seq = self.generate_state_sequence(T=T, sigma_e2_dB=sigma_e2_dB)
+        y_seq = self.generate_measurement_sequence(x_lorenz=x_seq, T=T, smnr_dB=smnr_dB)
+        # print(x_lorenz.shape, y_lorenz.shape)
+        return x_seq, y_seq, self.Cw
+
+
 class Nonlinear1D(object):
     def __init__(
         self,
@@ -28,7 +100,6 @@ class Nonlinear1D(object):
         d=0.05,
         measurement_fn_type="square",
         decimate=False,
-        decimation_factor=1,
         mu_e=None,
         mu_w=None,
     ):
@@ -38,7 +109,6 @@ class Nonlinear1D(object):
         self.b = b
         self.c = c
         self.d = d
-        self.decimation_factor = decimation_factor
         self.measurement_fn_type = measurement_fn_type
         self.mu_e = mu_e
         self.mu_w = mu_w
@@ -68,11 +138,8 @@ class Nonlinear1D(object):
         for t in range(0, T - 1):
             u_k = self.generate_driving_noise(t)
             x_k_arr[t + 1] = self.f_fn(x_k_arr[t]) + u_k + e_k_arr[t]
-        if self.decimate:
-            x_k_arr_d = x_k_arr[0 : T : self.K, :]
-        else:
-            x_k_arr_d = np.copy(x_k_arr)
-        return x_k_arr_d
+
+        return x_k_arr
 
     def generate_measurement_sequence(self, x_k_arr, T, smnr_dB):
         signal_power = np.var(self.h_fn(x_k_arr))
@@ -88,9 +155,7 @@ class Nonlinear1D(object):
 
     def generate_single_sequence(self, T, sigma_e2_dB, smnr_dB):
         x_seq = self.generate_state_sequence(T=T, sigma_e2_dB=sigma_e2_dB)
-        y_seq = self.generate_measurement_sequence(
-            x_lorenz=x_seq, T=T // self.K, smnr_dB=smnr_dB
-        )
+        y_seq = self.generate_measurement_sequence(x_lorenz=x_seq, T=T, smnr_dB=smnr_dB)
         # print(x_lorenz.shape, y_lorenz.shape)
         return x_seq, y_seq, self.Cw
 
@@ -106,11 +171,10 @@ class LorenzSSM(object):
         alpha=0.0,
         measurement_fn_type="square",
         decimate=False,
-        decimation_factor=1,
         mu_e=None,
         mu_w=None,
         H=None,
-        use_Taylor=True
+        use_Taylor=True,
     ) -> None:
         self.n_states = n_states
         self.J = J
@@ -119,7 +183,6 @@ class LorenzSSM(object):
         self.delta_d = delta_d
         self.n_obs = n_obs
         self.decimate = decimate
-        self.decimation_factor = decimation_factor
         self.measurement_fn_type = measurement_fn_type
         self.h_fn = get_measurement_fn(fn_name=self.measurement_fn_type)
         self.mu_e = mu_e
@@ -138,13 +201,6 @@ class LorenzSSM(object):
                 [0, z, -(8.0 + self.alpha) / 3],
             ]
         )
-
-    # def A_fn(self, z):
-    #    return np.array([
-    #                [-10, 10, 0],
-    #                [28, -1, -z],
-    #                [0, z, -8.0/3]
-    #            ])
 
     def linear_h_fn(self, x):
         """
@@ -183,6 +239,7 @@ class LorenzSSM(object):
     def generate_state_sequence(self, T, sigma_e2_dB):
         self.sigma_e2 = dB_to_lin(sigma_e2_dB)
         self.setStateCov(sigma_e2=self.sigma_e2)
+        self.decimation_factor = int(self.delta / self.delta_d)
         x_lorenz = np.zeros((T, self.n_states))
         e_k_arr = np.random.multivariate_normal(self.mu_e, self.Ce, size=(T,))
         # print(x_lorenz.shape)
@@ -313,7 +370,7 @@ class RosslerSSM(object):
     def generate_state_sequence(self, T, sigma_e2_dB):
         self.sigma_e2 = dB_to_lin(sigma_e2_dB)
         self.setStateCov(sigma_e2=self.sigma_e2)
-        self.K = int(self.delta / self.delta_d)
+        self.decimation_factor = int(self.delta / self.delta_d)
         x_rossler = np.zeros((T, self.n_states))
         x_rossler[0, :] = np.ones(
             self.n_states
@@ -326,7 +383,7 @@ class RosslerSSM(object):
             x_rossler[t + 1] = self.f_linearize(x_rossler[t]) + e_k_arr[t]
 
         if self.decimate is True:
-            x_rossler_d = x_rossler[0 : T : self.K, :]
+            x_rossler_d = x_rossler[0 : T : self.decimation_factor, :]
         else:
             x_rossler_d = np.copy(x_rossler)
 
@@ -350,7 +407,7 @@ class RosslerSSM(object):
     def generate_single_sequence(self, T, sigma_e2_dB, smnr_dB):
         x_rossler = self.generate_state_sequence(T=T, sigma_e2_dB=sigma_e2_dB)
         y_rossler = self.generate_measurement_sequence(
-            x_rossler=x_rossler, T=T // self.K, smnr_dB=smnr_dB
+            x_rossler=x_rossler, T=T // self.decimation_factor, smnr_dB=smnr_dB
         )
         return x_rossler, y_rossler, self.Cw
 

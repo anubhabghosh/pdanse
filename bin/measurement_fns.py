@@ -26,8 +26,8 @@ def poly_hfn(x, ord=3):
 def abs_hfn(x):
     return np.abs(x)
 
-def sin_hfn(x):
-    return np.sin(x)
+def dist_sq_hfn(x):
+    return np.sum(np.square(x))
 
 def get_measurement_fn(fn_name):
 
@@ -37,7 +37,7 @@ def get_measurement_fn(fn_name):
         "cubic": cubic_hfn,
         "poly": poly_hfn,
         "abs": abs_hfn,
-        "sin": sin_hfn
+        "dist_sq": dist_sq_hfn
     }
 
     return MEASUREMENT_FN_LIST[fn_name.lower()]
