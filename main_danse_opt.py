@@ -5,16 +5,21 @@
 # Import necessary libraries
 import os
 
-import argparse
-import json
-import pickle as pkl
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+import pickle as pkl  # noqa: E402
 
 # import matplotlib.pyplot as plt
-import torch
-from parse import parse
-from src.danse import DANSE, train_danse  # , test_danse
+import torch  # noqa: E402
+from parse import parse  # noqa: E402
+from src.danse import DANSE, train_danse  # , test_danse  # noqa: E402
 
-from utils.utils import (
+from utils.utils import (  # noqa: E402
     NDArrayEncoder,
     Series_Dataset,
     check_if_dir_or_file_exists,
@@ -23,14 +28,9 @@ from utils.utils import (
     load_saved_dataset,
     load_splits_file,
     obtain_tr_val_test_idx,
-)
+) 
 # Import the parameters
-from parameters_opt import get_H_DANSE, get_parameters
-
-import sys
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
+from parameters_opt import get_H_DANSE, get_parameters  # noqa: E402
 
 # from utils.plot_functions import plot_measurement_data, plot_measurement_data_axes, plot_state_trajectory, plot_state_trajectory_axes
 # Import estimator model and functions
@@ -38,13 +38,11 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 
 def main():
-    usage = (
-        "Train DANSE using trajectories of SSMs \n"
-        "python3.8 main_danse.py --mode [train/test] --model_type [gru/lstm/rnn] --dataset_mode [LinearSSM/LorenzSSM] \n"
-        "--datafile [fullpath to datafile] --splits [fullpath to splits file]"
-    )
 
     parser = argparse.ArgumentParser(
+        usage="Train DANSE using trajectories of SSMs \n"
+        "python3.8 main_danse.py --mode [train/test] --model_type [gru/lstm/rnn] --dataset_mode [LinearSSM/LorenzSSM] \n"
+        "--datafile [fullpath to datafile] --splits [fullpath to splits file]",
         description="Input a string indicating the mode of the script \n"
         "train - training and testing is done, test-only evlaution is carried out"
     )
@@ -56,12 +54,6 @@ def main():
         "--dataset_type", help="Enter the type of dataset (pfixed/vars/all)", type=str
     )
     parser.add_argument(
-        "--model_file_saved",
-        help="In case of testing mode, Enter the desired model checkpoint with full path (gru/lstm/rnn)",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
         "--datafile", help="Enter the full path to the dataset", type=str
     )
     parser.add_argument("--splits", help="Enter full path to splits file", type=str)
@@ -71,10 +63,9 @@ def main():
     model_type = args.rnn_model_type
     datafile = args.datafile
     dataset_type = args.dataset_type
-    datafolder = "".join(
-        datafile.split("/")[i] + "/" for i in range(len(datafile.split("/")) - 1)
-    )
-    model_file_saved = args.model_file_saved
+    #datafolder = "".join(
+    #    datafile.split("/")[i] + "/" for i in range(len(datafile.split("/")) - 1)
+    #)
     splits_file = args.splits
 
     print("datafile: {}".format(datafile))
