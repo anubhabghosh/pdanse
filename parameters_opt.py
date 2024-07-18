@@ -1102,6 +1102,7 @@ def get_parameters(
             "kappa": 0.10,
             "H": None,
             "h_fn_type": measurment_fn_type,
+            "n_MC":20,
             "mu_x0": np.zeros((n_states,)),
             "C_x0": np.eye(n_states, n_states),
             "batch_size": 64,

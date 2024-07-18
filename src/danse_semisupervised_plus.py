@@ -125,7 +125,7 @@ class SemiDANSEplus(nn.Module):
         return xt_yt_prev_expanded
 
     def compute_logpdf_Gaussian(self, input_, mean, cov):
-        batch_size, seq_length, input_dim = input_.shape
+        _, seq_length, _ = input_.shape
         logprob = (
             - 0.5 * self.n_states * seq_length * math.log(math.pi * 2)
             - 0.5 * torch.logdet(cov).sum(1)
@@ -181,7 +181,7 @@ class SemiDANSEplus(nn.Module):
             xt_yt_prev_unsup_expanded = self.reparameterize_and_sample_prior(
                 mu_xt_yt_prev=mu_xt_yt_prev_unsup, L_xt_yt_prev=L_xt_yt_prev_unsup
             )
-            # mu_xt_yt_current_test_unsup, L_xt_yt_current_test_unsup = self.compute_posterior_mean_vars(Yi_batch=Yi_batch_unsup)
+            
             loss_batch_unsup = (1.0 / self.n_MC) * self.compute_logpdf_Gaussian_expanded(
                 input_=Yi_batch_unsup.repeat(self.n_MC, 1, 1, 1),
                 mean=self.h_fn(xt_yt_prev_unsup_expanded),
@@ -208,7 +208,7 @@ class SemiDANSEplus(nn.Module):
                     cov=Cw_batch_sup.repeat(xt_yt_prev_unsup_expanded.shape[0], 
                                           xt_yt_prev_unsup_expanded.shape[1],
                                           1,1)
-                ) #TODO
+                ) 
                 elbo_batch_avg = loss_batch_unsup.mean(0) + loss_batch_sup.mean(0)
 
             else:
@@ -232,12 +232,11 @@ class SemiDANSEplus(nn.Module):
                     cov=Cw_batch_sup.repeat(xt_yt_prev_unsup_expanded.shape[0], 
                                           xt_yt_prev_unsup_expanded.shape[1],
                                           1,1)
-                ) #TODO 
+                ) 
                 elbo_batch_avg = loss_batch_sup.mean(0)
             else:
                 elbo_batch_avg = 0.0
 
-        # log_pXTYT_batch_avg = (logprob_batch_unsup.sum(0) + logprob_batch_sup.sum(0)) / Yi_batch_unsup.shape[0]
         return elbo_batch_avg
 
 
