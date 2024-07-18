@@ -91,19 +91,6 @@ def sample_from_pdf(distr, N_samples=100):
     samples = distr.sample((N_samples,))    
     return samples
 
-def compute_log_prob_normal(X, mean, cov):
-
-    Lambda_cov, U_cov = torch.linalg.eig(cov)
-    logprob_normal_fn = lambda X : torch.real(- 0.5 * X.shape[1] * torch.log(torch.Tensor([2*torch.pi])) - \
-        0.5 * torch.sum(torch.log(Lambda_cov)) - \
-        torch.diag(0.5 * (U_cov.H @ (X.H - mean).type(torch.cfloat)).H \
-            @ torch.diag(1 / (Lambda_cov + 1e-16)) \
-            @ (U_cov.H @ (X.H - mean).type(torch.cfloat))))
-
-    pX = logprob_normal_fn(X)
-
-    return pX
-
 def check_psd_cov(C):
     C = C.detach().cpu().numpy()
     return np.all(np.linalg.eigvals(C) >= 0)

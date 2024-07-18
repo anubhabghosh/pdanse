@@ -640,6 +640,7 @@ def get_H_DANSE(type_, n_states, n_obs):
         or type_ == "ChenSSM"
         or type_ == "RosslerSSM"
         or type_ == "Lorenz96SSM"
+        or type_ == "Nonlinear1DSSM"
     ):
         return np.eye(n_obs, n_states)
     elif type_ == "LorenzSSMn2" or type_ == "ChenSSMn2" or type_ == "RosslerSSMn2":
@@ -1091,6 +1092,34 @@ def get_parameters(
                     "n_hidden_dense": 32,
                     "device": device,
                 },
+            },
+        },
+        "danse_semisupervised_plus": {
+            "n_states": n_states,
+            "n_obs": n_obs,
+            "mu_w": np.zeros((n_obs,)),
+            "C_w": None,
+            "kappa": 0.10,
+            "H": None,
+            "h_fn_type": measurment_fn_type,
+            "mu_x0": np.zeros((n_states,)),
+            "C_x0": np.eye(n_states, n_states),
+            "batch_size": 64,
+            "rnn_type": "gru",
+            "device": device,
+            "rnn_params_dict": {
+                "gru": {
+                    "model_type": "gru",
+                    "input_size": n_obs,
+                    "output_size": n_states,
+                    "n_hidden": 30,
+                    "n_layers": 1,
+                    "lr": 5e-4,
+                    "num_epochs": 2000,
+                    "min_delta": 1e-2,
+                    "n_hidden_dense": 32,
+                    "device": device,
+                }
             },
         },
         # Parameters of the Model-based filters - KF, EKF, UKF

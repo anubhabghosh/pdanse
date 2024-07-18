@@ -15,6 +15,7 @@ import torch
 from torch import nn, optim
 from torch.autograd import Variable
 
+from bin.measurement_fns import get_measurement_fn
 from src.rnn import RNN_model
 from utils.utils import (
     ConvergenceMonitor,
@@ -33,7 +34,7 @@ def push_model(nets, device="cpu"):
     return nets
 
 
-class SemiDANSE(nn.Module):
+class SemiDANSEplus(nn.Module):
     def __init__(
         self,
         n_states,
@@ -41,6 +42,8 @@ class SemiDANSE(nn.Module):
         mu_w,
         C_w,
         H,
+        h_fn_type,
+        n_MC,
         mu_x0,
         C_x0,
         batch_size,
@@ -49,7 +52,7 @@ class SemiDANSE(nn.Module):
         kappa=0.2,
         device="cpu",
     ):
-        super(SemiDANSE, self).__init__()
+        super(SemiDANSEplus, self).__init__()
 
         self.device = device
 
@@ -67,7 +70,9 @@ class SemiDANSE(nn.Module):
 
         # Initialize the observation model matrix
         self.H = self.push_to_device(H)
-
+        self.h_fn_type = h_fn_type
+        self.n_MC = n_MC # Number of MC samples to be generated using the reparameterization trick
+        self.h_fn = get_measurement_fn(fn_name=self.h_fn_type)
         self.batch_size = batch_size
 
         # Initialize RNN type
@@ -81,10 +86,6 @@ class SemiDANSE(nn.Module):
         # Prior parameters
         self.mu_xt_yt_current = None
         self.L_xt_yt_current = None
-
-        # Marginal parameters
-        self.mu_yt_current = None
-        self.L_yt_current = None
 
         # Set the percentage of data to be used as supervision regularization
         self.kappa = kappa
@@ -102,100 +103,45 @@ class SemiDANSE(nn.Module):
         self.L_xt_yt_prev = create_diag(L_xt_yt_prev)
         return self.mu_xt_yt_prev, self.L_xt_yt_prev
 
-    def compute_marginal_mean_vars(self, mu_xt_yt_prev, L_xt_yt_prev, Cw_batch):
-        Cw_batch_seq = torch.repeat_interleave(
-            Cw_batch.unsqueeze(1), L_xt_yt_prev.shape[1], dim=1
+    def reparameterize_and_sample_prior(self):
+        eps = torch.repeat_interleave(
+            torch.unsqueeze(torch.randn_like(self.mu_xt_yt_prev), 0),
+            self.n_MC,
+            dim=0)
+        L_xt_yt_prev_expanded = torch.repeat_interleave(
+            torch.unsqueeze(self.L_xt_yt_prev, 0),
+            self.n_MC, 
+            dim=0
         )
-        # print(self.H.device, self.mu_xt_yt_prev.device, self.mu_w.device)
-        self.mu_yt_current = torch.einsum(
-            "ij,ntj->nti", self.H, mu_xt_yt_prev
-        ) + self.mu_w.squeeze(-1)
-        self.L_yt_current = (
-            self.H @ L_xt_yt_prev @ torch.transpose(self.H, 0, 1) + Cw_batch_seq
-        )  # + self.C_w
+        mu_xt_yt_prev_expanded = torch.repeat_interleave(
+            torch.unsqueeze(self.mu_xt_yt_prev, 0),
+            self.n_MC, 
+            dim=0
+        )
+        xt_yt_prev = torch.matmul(
+            torch.cholesky(L_xt_yt_prev_expanded), 
+            eps
+            ) + mu_xt_yt_prev_expanded
+        return xt_yt_prev
 
-    def compute_posterior_mean_vars(self, Yi_batch, Cw_batch):
-        Cw_batch_seq = torch.repeat_interleave(
-            Cw_batch.unsqueeze(1), self.L_xt_yt_prev.shape[1], dim=1
-        )
-        # print((self.H @ self.L_xt_yt_prev @ torch.transpose(self.H, 0, 1)).shape, self.L_xt_yt_prev.shape, Cw_batch_seq.shape)
-        Re_t_inv = torch.inverse(
-            self.H @ self.L_xt_yt_prev @ torch.transpose(self.H, 0, 1) + Cw_batch_seq
-        )  # torch.inverse(self.H @ self.L_xt_yt_prev @ torch.transpose(self.H, 0, 1) + self.C_w)
-        self.K_t = self.L_xt_yt_prev @ (self.H.T @ Re_t_inv)
-        self.mu_xt_yt_current = self.mu_xt_yt_prev + torch.einsum(
-            "ntij,ntj->nti",
-            self.K_t,
-            (Yi_batch - torch.einsum("ij,ntj->nti", self.H, self.mu_xt_yt_prev)),
-        )
-        # self.L_xt_yt_current = self.L_xt_yt_prev - (torch.einsum('ntij,ntjk->ntik',
-        #                    self.K_t, self.H @ self.L_xt_yt_prev @ torch.transpose(self.H, 0, 1) + self.C_w) @ torch.transpose(self.K_t, 2, 3))
-        self.L_xt_yt_current = self.L_xt_yt_prev - (
-            torch.einsum(
-                "ntij,ntjk->ntik",
-                self.K_t,
-                self.H @ self.L_xt_yt_prev @ torch.transpose(self.H, 0, 1)
-                + Cw_batch_seq,
-            )
-            @ torch.transpose(self.K_t, 2, 3)
-        )
-        return self.mu_xt_yt_current, self.L_xt_yt_current
-
-    def compute_logpdf_Gaussian_X(self, X):
-        _, T, _ = X.shape
+    def compute_logpdf_Gaussian(self, input_, mean, cov):
+        batch_size, seq_length, input_dim = input_.shape
         logprob = (
-            - 0.5 * self.n_states * T * math.log(math.pi * 2)
-            - 0.5 * torch.logdet(self.L_xt_yt_current).sum(1)
+            - 0.5 * self.n_states * seq_length * math.log(math.pi * 2)
+            - 0.5 * torch.logdet(cov).sum(1)
             - 0.5
             * torch.einsum(
                 "nti,nti->nt",
-                (X - self.mu_xt_yt_current),
+                (input_ - mean),
                 torch.einsum(
                     "ntij,ntj->nti",
-                    torch.inverse(self.L_xt_yt_current),
-                    (X - self.mu_xt_yt_current),
+                    torch.inverse(cov),
+                    (input_ - mean),
                 ),
             ).sum(1)
         )
 
         return logprob
-
-    def compute_logpdf_Gaussian_Y(self, Y):
-        _, T, _ = Y.shape
-        logprob = (
-            - 0.5 * self.n_obs * T * math.log(math.pi * 2)
-            - 0.5 * torch.logdet(self.L_yt_current).sum(1)
-            - 0.5
-            * torch.einsum(
-                "nti,nti->nt",
-                (Y - self.mu_yt_current),
-                torch.einsum(
-                    "ntij,ntj->nti",
-                    torch.inverse(self.L_yt_current),
-                    (Y - self.mu_yt_current),
-                ),
-            ).sum(1)
-        )
-
-        return logprob
-
-    def compute_predictions(self, Y_test_batch, Cw_test_batch):
-        mu_x_given_Y_test_batch, vars_x_given_Y_test_batch = self.rnn.forward(
-            x=Y_test_batch
-        )
-        mu_xt_yt_prev_test, L_xt_yt_prev_test = self.compute_prior_mean_vars(
-            mu_xt_yt_prev=mu_x_given_Y_test_batch,
-            L_xt_yt_prev=vars_x_given_Y_test_batch,
-        )
-        mu_xt_yt_current_test, L_xt_yt_current_test = self.compute_posterior_mean_vars(
-            Yi_batch=Y_test_batch, Cw_batch=Cw_test_batch
-        )
-        return (
-            mu_xt_yt_prev_test,
-            L_xt_yt_prev_test,
-            mu_xt_yt_current_test,
-            L_xt_yt_current_test,
-        )
 
     def forward(
         self,
@@ -213,13 +159,9 @@ class SemiDANSE(nn.Module):
             mu_xt_yt_prev_unsup, L_xt_yt_prev_unsup = self.compute_prior_mean_vars(
                 mu_xt_yt_prev=mu_batch_unsup, L_xt_yt_prev=vars_batch_unsup
             )
-            self.compute_marginal_mean_vars(
-                mu_xt_yt_prev=mu_xt_yt_prev_unsup,
-                L_xt_yt_prev=L_xt_yt_prev_unsup,
-                Cw_batch=Cw_batch_unsup,
-            )
+
             # mu_xt_yt_current_test_unsup, L_xt_yt_current_test_unsup = self.compute_posterior_mean_vars(Yi_batch=Yi_batch_unsup)
-            logprob_batch_unsup = self.compute_logpdf_Gaussian_Y(Y=Yi_batch_unsup)
+            logprob_batch_unsup = 0.0 #TODO
 
             if use_sup_loss:
                 # Compute the supervised loss
@@ -227,17 +169,7 @@ class SemiDANSE(nn.Module):
                 mu_xt_yt_prev_sup, L_xt_yt_prev_sup = self.compute_prior_mean_vars(
                     mu_xt_yt_prev=mu_batch_sup, L_xt_yt_prev=vars_batch_sup
                 )
-                self.compute_marginal_mean_vars(
-                    mu_xt_yt_prev=mu_xt_yt_prev_sup,
-                    L_xt_yt_prev=L_xt_yt_prev_sup,
-                    Cw_batch=Cw_batch_sup,
-                )
-                mu_xt_yt_current_sup, L_xt_yt_current_sup = (
-                    self.compute_posterior_mean_vars(
-                        Yi_batch=Yi_batch_sup, Cw_batch=Cw_batch_sup
-                    )
-                )
-                logprob_batch_sup = self.compute_logpdf_Gaussian_X(X=Xi_batch_sup)
+                logprob_batch_sup = None #TODO
                 log_pXTYT_batch_avg = logprob_batch_unsup.mean(
                     0
                 ) + logprob_batch_sup.mean(0)
@@ -252,28 +184,16 @@ class SemiDANSE(nn.Module):
                 mu_xt_yt_prev_sup, L_xt_yt_prev_sup = self.compute_prior_mean_vars(
                     mu_xt_yt_prev=mu_batch_sup, L_xt_yt_prev=vars_batch_sup
                 )
-                self.compute_marginal_mean_vars(
-                    mu_xt_yt_prev=mu_xt_yt_prev_sup,
-                    L_xt_yt_prev=L_xt_yt_prev_sup,
-                    Cw_batch=Cw_batch_sup,
-                )
-                mu_xt_yt_current_sup, L_xt_yt_current_sup = (
-                    self.compute_posterior_mean_vars(
-                        Yi_batch=Yi_batch_sup, Cw_batch=Cw_batch_sup
-                    )
-                )
-                logprob_batch_sup = self.compute_logpdf_Gaussian_X(X=Xi_batch_sup)
+                logprob_batch_sup = 0.0 #TODO 
                 log_pXTYT_batch_avg = logprob_batch_sup.mean(0)
-
             else:
                 log_pXTYT_batch_avg = 0.0
 
         # log_pXTYT_batch_avg = (logprob_batch_unsup.sum(0) + logprob_batch_sup.sum(0)) / Yi_batch_unsup.shape[0]
-
         return log_pXTYT_batch_avg
 
 
-def train_danse_semisupervised(
+def train_danse_semisupervised_plus(
     model,
     options,
     train_loader_unsup,
