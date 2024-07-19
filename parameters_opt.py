@@ -674,19 +674,14 @@ def get_parameters(
     measurment_fn_type="square",
     device="cpu",
 ):
-
     ssm_parameters_dict = {
         # Parameters of the linear model
         "LinearSSM": {
             "n_states": n_states,
             "n_obs": n_obs,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
-            "measurement_fn_type":measurment_fn_type,
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
+            "measurement_fn_type": measurment_fn_type,
         },
         "Nonlinear1DSSM": {
             "n_states": n_states,
@@ -695,14 +690,10 @@ def get_parameters(
             "b": 25.0,
             "c": 8.0,
             "d": 0.05,
-            "measurement_fn_type":measurment_fn_type,
-            "decimate":False,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "measurement_fn_type": measurment_fn_type,
+            "decimate": False,
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
         },
         # Parameters of the Lorenz Attractor model
         "LorenzSSM": {
@@ -713,14 +704,10 @@ def get_parameters(
             "alpha": 0.0,  # alpha = 0.0, implies a Lorenz model
             "H": None,  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_LORENZ63 / DECIMATION_FACTOR_LORENZ63,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -734,14 +721,10 @@ def get_parameters(
                 type_="LorenzSSMrn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_LORENZ63,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -755,13 +738,9 @@ def get_parameters(
                 type_="LorenzSSMn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_LORENZ63,
-            "measurement_fn_type":measurment_fn_type,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "measurement_fn_type": measurment_fn_type,
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -773,14 +752,10 @@ def get_parameters(
             "alpha": 1.0,  # alpha = 0.0, implies a Lorenz model
             "H": None,  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_CHEN / DECIMATION_FACTOR_CHEN,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -794,14 +769,10 @@ def get_parameters(
                 type_="ChenSSMrn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_CHEN / DECIMATION_FACTOR_CHEN,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -815,14 +786,10 @@ def get_parameters(
                 type_="ChenSSMn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_CHEN / DECIMATION_FACTOR_CHEN,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -836,14 +803,10 @@ def get_parameters(
             "c": 5.7,
             "H": None,  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_ROSSLER / DECIMATION_FACTOR_ROSSLER,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -859,14 +822,10 @@ def get_parameters(
                 type_="RosslerSSMrn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_ROSSLER / DECIMATION_FACTOR_ROSSLER,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -882,14 +841,10 @@ def get_parameters(
                 type_="RosslerSSMn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_ROSSLER / DECIMATION_FACTOR_ROSSLER,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": True,
-            "mu_e": np.zeros((
-                n_states,
-            )),
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_e": np.zeros((n_states,)),
+            "mu_w": np.zeros((n_states,)),
             "use_Taylor": True,
             "normalize": False,
         },
@@ -899,11 +854,9 @@ def get_parameters(
             "delta": DELTA_T_LORENZ96,
             "H": None,  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_LORENZ96 / DECIMATION_FACTOR_LORENZ96,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": False,
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_w": np.zeros((n_states,)),
             "method": "RK45",
             "F_mu": 8.0,
         },
@@ -915,11 +868,9 @@ def get_parameters(
                 type_="Lorenz96SSMn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_LORENZ96 / DECIMATION_FACTOR_LORENZ96,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": False,
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_w": np.zeros((n_states,)),
             "method": "RK45",
             "F_mu": 8.0,
         },
@@ -931,11 +882,9 @@ def get_parameters(
                 type_="Lorenz96SSMrn{}".format(n_obs), n_states=n_states, n_obs=n_obs
             ),  # By default, H is initialized to an identity matrix
             "delta_d": DELTA_T_LORENZ96 / DECIMATION_FACTOR_LORENZ96,
-            "measurement_fn_type":measurment_fn_type,
+            "measurement_fn_type": measurment_fn_type,
             "decimate": False,
-            "mu_w": np.zeros((
-                n_states,
-            )),
+            "mu_w": np.zeros((n_states,)),
             "method": "RK45",
             "F_mu": 8.0,
         },
@@ -1102,7 +1051,7 @@ def get_parameters(
             "kappa": 0.10,
             "H": None,
             "h_fn_type": measurment_fn_type,
-            "n_MC":20,
+            "n_MC": 20,
             "mu_x0": np.zeros((n_states,)),
             "C_x0": np.eye(n_states, n_states),
             "batch_size": 64,
