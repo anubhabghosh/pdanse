@@ -243,19 +243,19 @@ def main():
 
     if mode.lower() == "train":
         estimator_options["kappa"] = kappa
-        model_danse = SemiDANSEplus(**estimator_options)
+        model_semidanse_plus = SemiDANSEplus(**estimator_options)
         tr_verbose = True
-        print("Chosen value of kappa: {}".format(model_danse.kappa))
+        print("Chosen value of kappa: {}".format(model_semidanse_plus.kappa))
 
         # Starting model training
         tr_losses, val_losses, _, _, _ = train_danse_semisupervised_plus(
-            model=model_danse,
+            model=model_semidanse_plus,
             train_loader_unsup=train_loader_unsup,
             val_loader_unsup=val_loader_unsup,
             train_loader_sup=train_loader_sup,
             val_loader_sup=val_loader_sup,
             options=estimator_options,
-            nepochs=model_danse.rnn.num_epochs,
+            nepochs=model_semidanse_plus.rnn.num_epochs,
             logfile_path=tr_logfile_name_with_path,
             modelfile_path=modelfile_path,
             save_chkpoints="some",

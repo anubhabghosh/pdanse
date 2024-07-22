@@ -9,6 +9,9 @@ from os import sys, path
 PARENT_DIR = path.dirname(path.dirname(path.abspath(__file__)))
 sys.path.append(PARENT_DIR)
 
+def identity_hfn(x):
+    return x
+
 def square_hfn(x):
     if type(x).__module__ == np.__name__:
         return np.square(x)
@@ -42,7 +45,8 @@ def dist_sq_hfn(x):
 
 def get_measurement_fn(fn_name):
 
-    MEASUREMENT_FN_LIST = {    
+    MEASUREMENT_FN_LIST = {  
+        "identity": identity_hfn,  
         "square": square_hfn,
         "cubic": cubic_hfn,
         "poly": poly_hfn,

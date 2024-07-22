@@ -100,9 +100,8 @@ class SemiDANSEplus(nn.Module):
         return self.mu_xt_yt_prev, self.L_xt_yt_prev
 
     def reparameterize_and_sample_prior(self, mu_xt_yt_prev, L_xt_yt_prev):
-        eps = torch.repeat_interleave(
-            torch.unsqueeze(torch.randn_like(mu_xt_yt_prev), 0), self.n_MC, dim=0
-        )
+  
+        eps = torch.unsqueeze(torch.randn_like(mu_xt_yt_prev), 0).repeat(self.n_MC, 1, 1, 1)
         L_xt_yt_prev_expanded = torch.repeat_interleave(
             torch.unsqueeze(L_xt_yt_prev, 0), self.n_MC, dim=0
         )
@@ -110,7 +109,9 @@ class SemiDANSEplus(nn.Module):
             torch.unsqueeze(mu_xt_yt_prev, 0), self.n_MC, dim=0
         )
         xt_yt_prev_expanded = (
-            torch.matmul(torch.cholesky(L_xt_yt_prev_expanded), eps)
+            torch.einsum('lntij,lntj->lnti',
+            torch.cholesky(L_xt_yt_prev_expanded), eps
+            )
             + mu_xt_yt_prev_expanded
         )
         return xt_yt_prev_expanded
@@ -163,9 +164,9 @@ class SemiDANSEplus(nn.Module):
         log_post_weights_t_num = self.compute_logpdf_Gaussian_expanded(
             input_=Yi_test_batch.repeat(self.n_MC, 1, 1, 1),
             mean=self.h_fn(xt_yt_prev_test_expanded),
-            cov=Cw_test_batch.repeat(
+            cov=Cw_test_batch.unsqueeze(1).unsqueeze(0).repeat(
                 xt_yt_prev_test_expanded.shape[0],
-                xt_yt_prev_test_expanded.shape[1],
+                1,
                 xt_yt_prev_test_expanded.shape[2],
                 1,
                 1,
@@ -185,7 +186,7 @@ class SemiDANSEplus(nn.Module):
             )
         )
 
-        return self.mu_xt_yt_current, self.L_xt_yt_current
+        return self.mu_xt_yt_prev, self.L_xt_yt_prev, self.mu_xt_yt_current, self.L_xt_yt_current
 
     def forward(
         self,
@@ -206,20 +207,19 @@ class SemiDANSEplus(nn.Module):
             xt_yt_prev_unsup_expanded = self.reparameterize_and_sample_prior(
                 mu_xt_yt_prev=mu_xt_yt_prev_unsup, L_xt_yt_prev=L_xt_yt_prev_unsup
             )
-
             loss_batch_unsup = (
                 1.0 / self.n_MC
             ) * self.compute_logpdf_Gaussian_expanded(
                 input_=Yi_batch_unsup.repeat(self.n_MC, 1, 1, 1),
                 mean=self.h_fn(xt_yt_prev_unsup_expanded),
-                cov=Cw_batch_unsup.repeat(
+                cov=Cw_batch_unsup.unsqueeze(1).unsqueeze(0).repeat(
                     xt_yt_prev_unsup_expanded.shape[0],
-                    xt_yt_prev_unsup_expanded.shape[1],
+                    1,
                     xt_yt_prev_unsup_expanded.shape[2],
                     1,
                     1,
-                ).sum(0),
-            )
+                ),
+            ).sum(0)
 
             if use_sup_loss:
                 # Compute the supervised loss
@@ -233,9 +233,9 @@ class SemiDANSEplus(nn.Module):
                 ) + self.compute_logpdf_Gaussian(
                     input_=Yi_batch_sup,
                     mean=self.h_fn(Xi_batch_sup),
-                    cov=Cw_batch_sup.repeat(
-                        xt_yt_prev_unsup_expanded.shape[0],
-                        xt_yt_prev_unsup_expanded.shape[1],
+                    cov=Cw_batch_sup.unsqueeze(1).repeat(
+                        1,
+                        mu_xt_yt_prev_sup.shape[1],
                         1,
                         1,
                     ),
@@ -258,9 +258,9 @@ class SemiDANSEplus(nn.Module):
                 ) + self.compute_logpdf_Gaussian(
                     input_=Yi_batch_sup,
                     mean=self.h_fn(Xi_batch_sup),
-                    cov=Cw_batch_sup.repeat(
-                        xt_yt_prev_unsup_expanded.shape[0],
-                        xt_yt_prev_unsup_expanded.shape[1],
+                    cov=Cw_batch_sup.unsqueeze(1).repeat(
+                        1,
+                        mu_xt_yt_prev_sup.shape[1],
                         1,
                         1,
                     ),
@@ -269,6 +269,7 @@ class SemiDANSEplus(nn.Module):
             else:
                 elbo_batch_avg = 0.0
 
+        elbo_batch_avg = elbo_batch_avg / (Yi_batch_unsup.size()[-2] * Yi_batch_unsup.size()[-1]) # Getting a per-seq length and a per-dim loss
         return elbo_batch_avg
 
 
@@ -560,7 +561,7 @@ def train_danse_semisupervised_plus(
                 model_monitor.record(val_loss)
 
             # Displaying loss at an interval of 200 epochs
-            if tr_verbose is True and (((epoch + 1) % 50) == 0 or epoch == 0):
+            if tr_verbose is True and (((epoch + 1) % 10) == 0 or epoch == 0):
                 print(
                     "Epoch: {}/{}, Training NLL:{:.9f}, Val. NLL:{:.9f}, Val. MSE:{:.9f}".format(
                         epoch + 1, model.rnn.num_epochs, tr_loss, val_loss, val_mse_loss

@@ -113,10 +113,10 @@ class Nonlinear1DSSM(object):
         self.h_fn = get_measurement_fn(fn_name=self.measurement_fn_type)
 
     def setStateCov(self, sigma_e2=0.1):
-        self.Ce = sigma_e2 * torch.eye(self.n_states)
+        self.Ce = sigma_e2 * np.eye(self.n_states)
 
     def setMeasurementCov(self, sigma_w2=1.0):
-        self.Cw = sigma_w2 * torch.eye(self.n_obs)
+        self.Cw = sigma_w2 * np.eye(self.n_obs)
 
     def generate_driving_noise(self, k):
         u_k = np.cos(self.c * k)  # Previous idea (considering start at k=0)
