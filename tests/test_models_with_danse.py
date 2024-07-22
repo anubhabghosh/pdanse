@@ -22,13 +22,14 @@ import tikzplotlib
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from utils.plot_functions import *
+from utils.plot_functions import plot_3d_state_trajectory, plot_3d_measurement_trajectory, \
+    plot_state_trajectory_axes_all, plot_state_trajectory_w_lims, plot_meas_trajectory_w_lims
 from utils.utils import dB_to_lin, nmse_loss, \
-    mse_loss_dB, load_saved_dataset, save_dataset, nmse_loss_std, mse_loss_dB_std, NDArrayEncoder, partial_corrupt, push_model
+    mse_loss_dB, load_saved_dataset, save_dataset, nmse_loss_std, mse_loss_dB_std, NDArrayEncoder
 #from parameters import get_parameters, A_fn, h_fn, f_lorenz_danse, f_lorenz_danse_ukf, delta_t, J_test
-from parameters_opt import get_parameters, f_lorenz, f_lorenz_ukf, f_chen, f_chen_ukf, f_rossler, f_rossler_ukf, \
-    J_test, delta_t, delta_t_chen, delta_t_rossler, \
-    decimation_factor_lorenz, decimation_factor_chen, decimation_factor_rossler, get_H_DANSE
+from config.parameters_opt import get_parameters, f_lorenz, f_lorenz_ukf, f_chen, f_chen_ukf, f_rossler, f_rossler_ukf, \
+    J_TEST, DELTA_T_LORENZ63, DELTA_T_CHEN, DELTA_T_ROSSLER, \
+    DECIMATION_FACTOR_LORENZ63, DECIMATION_FACTOR_CHEN, DECIMATION_FACTOR_ROSSLER, get_H_DANSE
 from bin.generate_data import LorenzSSM, RosslerSSM
 from test_ekf_ssm import test_ekf_ssm
 from test_ukf_ssm import test_ukf_ssm
@@ -111,41 +112,41 @@ def test_on_ssm_model(device='cpu', learnable_model_files=None, test_data_file=N
         f_fn, f_ukf_fn = get_f_function(ssm_type)
 
         if "LorenzSSM" in ssm_type:
-            delta = delta_t # If decimate is True, then set this delta to 1e-5 and run it for long time
-            delta_d = delta_t / decimation_factor_lorenz
+            delta = DELTA_T_LORENZ63 # If decimate is True, then set this delta to 1e-5 and run it for long time
+            delta_d = DELTA_T_LORENZ63 / DECIMATION_FACTOR_LORENZ63
             ssm_model_test = LorenzSSM(n_states=m, n_obs=n, J=J, delta=delta, 
                                 delta_d=delta_d, decimate=decimate, alpha=0.0,
                                 H=get_H_DANSE(type_=ssm_type, n_states=m, n_obs=n),
                                 mu_e=np.zeros((m,)), mu_w=np.zeros((n,)),
                                 use_Taylor=use_Taylor)
-            decimation_factor = decimation_factor_lorenz
+            decimation_factor = DECIMATION_FACTOR_LORENZ63
 
         elif "ChenSSM" in ssm_type:
-            delta = delta_t_chen # If decimate is True, then set this delta to 1e-5 and run it for long time
-            delta_d = delta_t_chen / decimation_factor_chen
+            delta = DELTA_T_CHEN # If decimate is True, then set this delta to 1e-5 and run it for long time
+            delta_d = DELTA_T_CHEN / DECIMATION_FACTOR_CHEN
             ssm_model_test = LorenzSSM(n_states=m, n_obs=n, J=J, delta=delta, 
                                 delta_d=delta_d, decimate=decimate, alpha=1.0,
                                 H=get_H_DANSE(type_=ssm_type, n_states=m, n_obs=n),
                                 mu_e=np.zeros((m,)), mu_w=np.zeros((n,)),
                                 use_Taylor=use_Taylor)
-            decimation_factor = decimation_factor_chen
+            decimation_factor = DECIMATION_FACTOR_CHEN
 
         elif "RosslerSSM" in ssm_type:
-            delta = delta_t_rossler # If decimate is True, then set this delta to 1e-5 and run it for long time
-            delta_d = delta_t_rossler / decimation_factor_rossler
+            delta = DELTA_T_ROSSLER # If decimate is True, then set this delta to 1e-5 and run it for long time
+            delta_d = DELTA_T_ROSSLER / DECIMATION_FACTOR_ROSSLER
             ssm_model_test = RosslerSSM(n_states=m, n_obs=n, J=J_test, delta=delta, delta_d=delta_d, 
                                    a=ssm_model_test_dict['a'], b=ssm_model_test_dict['b'],
                                    H=get_H_DANSE(type_=ssm_type, n_states=m, n_obs=n),
                                    c=ssm_model_test_dict['c'], decimate=decimate, mu_e=np.zeros((m,)), 
                                    mu_w=np.zeros((n,)), use_Taylor=use_Taylor)
-            decimation_factor = decimation_factor_rossler
+            decimation_factor = DECIMATION_FACTOR_ROSSLER
 
         print("Test data generated using sigma_e2: {} dB, SMNR: {} dB".format(sigma_e2_dB_test, smnr_dB_test))
         
         idx_test = 0
         while idx_test <  N_test:
             x_ssm_i, y_ssm_i, cw_ssm_i = ssm_model_test.generate_single_sequence(T=int(T_test*decimation_factor), sigma_e2_dB=sigma_e2_dB_test, smnr_dB=smnr_dB_test)
-            if np.isnan(x_ssm_i).any() == False:
+            if np.isnan(x_ssm_i).any() is False:
                 X[idx_test, :, :] = torch.from_numpy(x_ssm_i).type(torch.FloatTensor)
                 Y[idx_test, :, :] = torch.from_numpy(y_ssm_i).type(torch.FloatTensor)
                 Cw[idx_test, :, :] = torch.from_numpy(cw_ssm_i).type(torch.FloatTensor)
@@ -210,10 +211,10 @@ def test_on_ssm_model(device='cpu', learnable_model_files=None, test_data_file=N
     #####################################################################################################################################################################
     # Model-based filters 
     print("Fed to Model-based filters: ", file=orig_stdout)
-    print("sigma_e2: {}dB, smnr: {}dB, delta_t: {}".format(sigma_e2_dB_test, smnr_dB_test, delta_t), file=orig_stdout)
+    print("sigma_e2: {}dB, smnr: {}dB, delta_t: {}".format(sigma_e2_dB_test, smnr_dB_test, DELTA_T_LORENZ63), file=orig_stdout)
 
     print("Fed to Model-based filters: ")
-    print("sigma_e2: {}dB, smnr: {}dB, delta_t: {}".format(sigma_e2_dB_test, smnr_dB_test, delta_t))
+    print("sigma_e2: {}dB, smnr: {}dB, delta_t: {}".format(sigma_e2_dB_test, smnr_dB_test, DELTA_T_LORENZ63))
 
     ssm_model_test.sigma_e2 = dB_to_lin(sigma_e2_dB_test)
     ssm_model_test.setStateCov(sigma_e2=dB_to_lin(sigma_e2_dB_test))
@@ -228,7 +229,7 @@ def test_on_ssm_model(device='cpu', learnable_model_files=None, test_data_file=N
         X_estimated_dict["ekf"]["est"] = X_estimated_ekf
         X_estimated_dict["ekf"]["est_cov"] = Pk_estimated_ekf
     else:
-        X_estimated_ekf, Pk_estimated_ekf, mse_arr_ekf, time_elapsed_ekf = None, None, None, None
+        X_estimated_ekf, Pk_estimated_ekf, _, time_elapsed_ekf = None, None, None, None
 
     # Estimator: UKF
     if "ukf" in models_list:
@@ -252,7 +253,7 @@ def test_on_ssm_model(device='cpu', learnable_model_files=None, test_data_file=N
                                                                         )
 
     else:
-        X_estimated_ukf, Pk_estimated_ukf, mse_arr_ukf, time_elapsed_ukf = None, None, None, None
+        X_estimated_ukf, Pk_estimated_ukf, _, time_elapsed_ukf = None, None, None, None
         Y_estimated_ukf_pred, Py_estimated_ukf_pred = None, None
     #####################################################################################################################################################################
     
@@ -290,7 +291,7 @@ def test_on_ssm_model(device='cpu', learnable_model_files=None, test_data_file=N
         X_estimated_dict["danse_supervised"]["est"] = X_estimated_filtered_danse_supervised
         X_estimated_dict["danse_supervised"]["est_cov"] = Pk_estimated_filtered_danse_supervised
     else:
-        X_estimated_pred_danse_supervised, Pk_estimated_pred_danse_supervised, X_estimated_filtered_danse_supervised, \
+        _, _, X_estimated_filtered_danse_supervised, \
             Pk_estimated_filtered_danse_supervised, time_elapsed_danse_supervised = None, None, None, None, None
     #####################################################################################################################################################################
 
@@ -349,7 +350,7 @@ def test_on_ssm_model(device='cpu', learnable_model_files=None, test_data_file=N
 
     for metric_name in metrics_list:
         metric_fn = metric_to_func_map(metric_name=metric_name) if metric_name != "time_elapsed" else None
-        if not metric_fn is None:
+        if metric_fn is not None:
             metrics_dict_for_one_smnr[metric_name] = {
                 "ls":metric_fn(X[:,:,:], X_LS[:,:,:]).numpy().item() if "ls" in models_list else None,
                 "ekf": metric_fn(X[:,:,:], X_estimated_ekf[:,:,:]).numpy().item() if "ekf" in models_list else None,
@@ -550,9 +551,9 @@ if __name__ == "__main__":
             else:
                 saved_model = key
             
-            N_train_actual = nsup if not nsup is None and saved_model in ["danse_supervised"] else N_train 
+            N_train_actual = nsup if nsup is not None and saved_model in ["danse_supervised"] else N_train 
 
-            if saved_model == "danse_semisupervised" and not nsup is None:
+            if saved_model == "danse_semisupervised" and nsup is not None:
                 model_file_saved_dict[key][smnr_dB_label] = glob.glob("./models/*{}_{}_*nsup_{}_m_{}_n_{}_*T_{}_N_{}*sigmae2_{}dB_smnr_{}dB*/*best*".format(
                     ssmtype, saved_model, nsup, m, n, T_train, N_train_actual, sigma_e2_dB_test, smnr_dB_arr[j]))[-1]
             elif saved_model == "KNetUoffline":
@@ -583,7 +584,7 @@ if __name__ == "__main__":
         f.write(json.dumps(metrics_dict, cls=NDArrayEncoder, indent=2))  
     
     plt.rcParams['font.family'] = 'serif'
-    display_metrics = [idx_metric for idx_metric in range(len(list_of_metrics)) if not "_std" in list_of_metrics[idx_metric]]
+    display_metrics = [idx_metric for idx_metric in range(len(list_of_metrics)) if "_std" not in list_of_metrics[idx_metric]]
     
     '''
     for idx_display_metric in range(len(display_metrics)):

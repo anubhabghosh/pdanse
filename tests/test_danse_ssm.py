@@ -10,9 +10,9 @@ from timeit import default_timer as timer
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 from src.danse import DANSE
-from src.danse_semisupervised import SemiDANSE
+from src.semidanse import SemiDANSE
 from src.danse_supervised import DANSE_Supervised
-from parameters_opt import get_parameters
+from config.parameters_opt import get_parameters
 from torch.autograd import Variable
 from utils.utils import push_model
 

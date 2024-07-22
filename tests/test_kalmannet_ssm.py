@@ -10,7 +10,7 @@ from timeit import default_timer as timer
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 from src.k_net import KalmanNetNN
-from parameters_opt import get_parameters
+from config.parameters_opt import get_parameters
 from torch.autograd import Variable
 from utils.utils import push_model
 

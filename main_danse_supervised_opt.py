@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader, Dataset
 from utils.utils import load_saved_dataset, Series_Dataset, obtain_tr_val_test_idx, create_splits_file_name, \
     create_file_paths, check_if_dir_or_file_exists, load_splits_file, get_dataloaders, NDArrayEncoder, get_batch_size_sup
 # Import the parameters
-from parameters_opt import get_parameters, get_H_DANSE
+from config.parameters_opt import get_parameters, get_H_DANSE
 #from utils.plot_functions import plot_measurement_data, plot_measurement_data_axes, plot_state_trajectory, plot_state_trajectory_axes
 
 # Import estimator model and functions
@@ -234,17 +234,6 @@ def main():
             'danse_supervised_{}_losses_eps{}.json'.format(estimator_options['rnn_type'], 
             estimator_options['rnn_params_dict'][model_type]['num_epochs'])), 'w') as f:
             f.write(json.dumps(losses_model, cls=NDArrayEncoder, indent=2))
-
-    elif mode.lower() == "test":
-
-        #model_file_saved = "./model_checkpoints/{}_usenorm_{}_ckpt_epoch_{}.pt".format(model_type, usenorm_flag, epoch_test)
-        te_loss = test_danse_supervised(
-            test_loader=test_loader,
-            options=estimator_options,
-            device=device,
-            model_file=model_file_saved,
-            test_logfile_path=te_logfile_name_with_path
-            )
     
     return None
 

@@ -16,11 +16,11 @@ import torch  # Importing torch libraries # noqa: E402
 from parse import parse  # noqa: E402
 
 # Import the parameters
-from parameters_opt import get_H_DANSE, get_parameters  # noqa: E402
+from config.parameters_opt import get_H_DANSE, get_parameters  # noqa: E402
 
 # from utils.plot_functions import plot_measurement_data, plot_measurement_data_axes, plot_state_trajectory, plot_state_trajectory_axes
 # Import estimator model and functions
-from src.danse_semisupervised_plus import SemiDANSEplus, train_danse_semisupervised_plus  # noqa: E402
+from src.semidanse_plus import SemiDANSEplus, train_danse_semisupervised_plus  # noqa: E402
 from utils.utils import (  # noqa: E402
     NDArrayEncoder,
     check_if_dir_or_file_exists,
@@ -68,10 +68,10 @@ def main():
     datafile = args.datafile
     dataset_type = args.dataset_type
     n_sup = args.n_sup
-    datafolder = "".join(
-        datafile.split("/")[i] + "/" for i in range(len(datafile.split("/")) - 1)
-    )
-    model_file_saved = args.model_file_saved
+    #datafolder = "".join(
+    #    datafile.split("/")[i] + "/" for i in range(len(datafile.split("/")) - 1)
+    #)
+    #model_file_saved = args.model_file_saved
     splits_file = args.splits
 
     print("datafile: {}".format(datafile))
@@ -108,11 +108,11 @@ def main():
         measurment_fn_type=measurement_fn_type,
     )
 
-    batch_size = est_parameters_dict["danse_semisupervised"][
+    batch_size = est_parameters_dict["danse_semisupervised_plus"][
         "batch_size"
     ]  # Set the batch size
     estimator_options = est_parameters_dict[
-        "danse_semisupervised"
+        "danse_semisupervised_plus"
     ]  # Get the options for the estimator
 
     if not os.path.isfile(datafile):
@@ -272,7 +272,7 @@ def main():
         with open(
             os.path.join(
                 os.path.join(logfile_path, main_exp_name),
-                "danse_semisupervised_{}_losses_eps{}.json".format(
+                "danse_semisupervised_plus_{}_losses_eps{}.json".format(
                     estimator_options["rnn_type"],
                     estimator_options["rnn_params_dict"][model_type]["num_epochs"],
                 ),

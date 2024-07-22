@@ -8,7 +8,7 @@ import os
 from timeit import default_timer as timer
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
-from parameters_opt import J_test
+from config.parameters_opt import J_test
 from src.ekf import EKF
 
 def test_ekf_ssm(X_test, Y_test, ssm_model_test, f_fn, Cw_test=None, device='cpu', use_Taylor=True):

@@ -14,7 +14,7 @@ PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PARENT_DIR)
 
 from bin.ssm_models import LinearSSM, Nonlinear1DSSM, Lorenz96SSM, LorenzSSM, RosslerSSM  # noqa: E402
-from parameters_opt import get_parameters  # noqa: E402
+from config.parameters_opt import get_parameters  # noqa: E402
 from utils.utils import save_dataset  # noqa: E402
 
 

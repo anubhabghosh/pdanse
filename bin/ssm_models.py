@@ -262,7 +262,7 @@ class LorenzSSM(object):
 
         # print(self.H.shape, x_lorenz.shape, y_lorenz.shape)
         for t in range(0, T):
-            if self.measurement_fn_type == "linear":
+            if self.measurement_fn_type == "linear" or self.measurement_fn_type == "identity":
                 y_lorenz[t] = self.linear_h_fn(x_lorenz[t]) + w_k_arr[t]
             else:
                 y_lorenz[t] = self.h_fn(x_lorenz[t]) + w_k_arr[t]
@@ -400,7 +400,7 @@ class RosslerSSM(object):
 
         # print(self.H.shape, x_rossler.shape, y_rossler.shape)
         for t in range(0, T):
-            if self.measurement_fn_type == "linear":
+            if self.measurement_fn_type == "linear" or self.measurement_fn_type == "identity":
                 y_rossler[t] = self.linear_h_fn(x_rossler[t]) + w_k_arr[t]
             else:
                 y_rossler[t] = self.h_fn(x_rossler[t]) + w_k_arr[t]
@@ -522,7 +522,7 @@ class Lorenz96SSM(object):
 
         # print(self.H.shape, x_lorenz.shape, y_lorenz.shape)
         for t in range(0, T):
-            if self.measurement_fn_type == "linear":
+            if self.measurement_fn_type == "linear" or self.measurement_fn_type == "identity":
                 y_lorenz[t] = self.linear_h_fn(x_lorenz[t]) + w_k_arr[t]
             else:
                 y_lorenz[t] = self.h_fn(x_lorenz[t]) + w_k_arr[t]
