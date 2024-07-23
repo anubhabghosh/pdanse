@@ -1,18 +1,18 @@
 #!/bin/bash
 n_states=3
 n_obs=3
-N=100
+N=1000
 T=100
 dataset_type="LorenzSSM"
 sigma_e2_dB=-10.0
 model_type="gru"
 script_name="main_semidanse_plus_opt.py"
-h_fn_type="cubic"
-n_sup=10
+h_fn_type="poly"
+n_sup=20
 
-for smnr in 30.0
+for smnr in 10.0
 do
-	python3.8 ${script_name} \
+	python3.7 ${script_name} \
 	--mode train \
 	--rnn_model_type ${model_type} \
 	--dataset_type ${dataset_type} \

@@ -18,6 +18,12 @@ def square_hfn(x):
     elif type(x).__module__ == torch.__name__:
         return torch.square(x)
 
+def sigmoid_hfn(x):
+    if type(x).__module__ == np.__name__:
+        return 1.0 / (1.0 + np.exp(-x))
+    elif type(x).__module__ == torch.__name__:
+        return 1.0 / (1.0 + torch.exp(-x))
+
 def cubic_hfn(x):
     return x**3
 
@@ -51,7 +57,8 @@ def get_measurement_fn(fn_name):
         "cubic": cubic_hfn,
         "poly": poly_hfn,
         "abs": abs_hfn,
-        "dist_sq": dist_sq_hfn
+        "dist_sq": dist_sq_hfn,
+        "sigmoid":sigmoid_hfn
     }
 
     return MEASUREMENT_FN_LIST[fn_name.lower()]

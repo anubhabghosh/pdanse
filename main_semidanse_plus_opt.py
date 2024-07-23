@@ -196,8 +196,9 @@ def main():
         dataset_type += "_" + norm_indicator.lower()
 
     # NOTE: Currently this is hardcoded into the system
-    main_exp_name = "{}_danse_semisupervised_opt_{}_nsup_{}_m_{}_n_{}_T_{}_N_{}_sigmae2_{}dB_smnr_{}dB".format(
+    main_exp_name = "{}_{}_danse_semisupervised_opt_{}_nsup_{}_m_{}_n_{}_T_{}_N_{}_sigmae2_{}dB_smnr_{}dB".format(
         dataset_type,
+        measurement_fn_type,
         model_type,
         n_sup,  # estimator_options["kappa"],
         n_states,

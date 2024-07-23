@@ -3,10 +3,10 @@
 # Creator: Anubhab Ghosh, Nov 2023.
 
 # The python kernel version e.g. to run on python 3.8 version use: python3.8
-PYTHON="python3.8"
+PYTHON="python3.7"
 
 # The number of i.i.d. trajectories each of length T that constitute the training data
-N=100
+N=1000
 
 # Length of each such training data trajectory, default it is set to T=1000
 T=100
@@ -20,7 +20,7 @@ n_states=3
 n_obs=3
 
 # Measurement function type
-h_fn_type="cubic"
+h_fn_type="poly"
 
 # dataset_type defines the type of dynamical system, the general terminology, e.g. for the Lorenz 63 system, 
 # the type is LorenzSSM, similarly for Chen and Rossler attractor we have ChenSSM and RosslerSSM respectively.
@@ -41,7 +41,7 @@ output_path="./data/synthetic_data/"
 sigma_e2_dB=-10.0
 
 # For different signal-to-measurement-noise ratio (SMNRs), run the data generation 
-for smnr in 30.0
+for smnr in 10.0
 do
     ${PYTHON} ${script_name} \
     --n_states ${n_states} \
