@@ -561,7 +561,7 @@ def train_danse_semisupervised_plus(
                 model_monitor.record(val_loss)
 
             # Displaying loss at an interval of 200 epochs
-            if tr_verbose is True and (((epoch + 1) % 100) == 0 or epoch == 0):
+            if tr_verbose is True and (((epoch + 1) % 50) == 0 or epoch == 0):
                 print(
                         "Epoch: {}/{}, Training NLL:{:.9f}, Val. NLL:{:.9f}, Val. MSE:{:.9f}, Time_Elapsed:{:.4f} secs".format(
                         epoch + 1, model.rnn.num_epochs, tr_loss, val_loss, val_mse_loss, time_elapsed
