@@ -130,7 +130,7 @@ def main():
     Z_XY_sup_dict, Z_XY_unsup_dict = split_joint_dataset_S_US(
         Z_XY, n_sup=n_sup, randomize=True
     )
-    print(Z_XY_sup_dict["data"].shape, Z_XY_unsup_dict["data"].shape)
+    print(Z_XY_sup_dict["dataX"].shape, Z_XY_unsup_dict["dataX"].shape)
 
     ssm_model = Z_XY["ssm_model"]
     estimator_options["C_w"] = (

@@ -70,6 +70,9 @@ class SemiDANSEplus(nn.Module):
         self.n_MC = n_MC  # Number of MC samples to be generated using the reparameterization trick
         self.h_fn = get_measurement_fn(fn_name=self.h_fn_type)
         self.batch_size = batch_size
+        
+        #a = torch.randn(3,).to(self.device)
+        #print(a, self.h_fn, self.h_fn(a))
 
         # Initialize RNN type
         self.rnn_type = rnn_type
@@ -561,7 +564,7 @@ def train_danse_semisupervised_plus(
                 model_monitor.record(val_loss)
 
             # Displaying loss at an interval of 200 epochs
-            if tr_verbose is True and (((epoch + 1) % 50) == 0 or epoch == 0):
+            if tr_verbose is True and (((epoch + 1) % 100) == 0 or epoch == 0):
                 print(
                         "Epoch: {}/{}, Training NLL:{:.9f}, Val. NLL:{:.9f}, Val. MSE:{:.9f}, Time_Elapsed:{:.4f} secs".format(
                         epoch + 1, model.rnn.num_epochs, tr_loss, val_loss, val_mse_loss, time_elapsed
@@ -630,8 +633,9 @@ def train_danse_semisupervised_plus(
                 best_model_wts = copy.deepcopy(model.state_dict()) # Weights for the best model
             """
             # Saving every value
-            tr_losses.append(tr_loss)
-            val_losses.append(val_loss)
+            if (epoch + 1) % 10 == 0:
+                tr_losses.append(tr_loss)
+                val_losses.append(val_loss)
 
             # Check monitor flag
             if model_monitor.monitor(epoch=epoch + 1) is True:

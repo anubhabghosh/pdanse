@@ -252,10 +252,10 @@ def main():
     # Parameters to be tuned
     if model_type == "gru":
         gs_params = {
-            "n_hidden": [60, 80, 100],
-            "n_layers": [1, 2],
-            "num_epochs": [5000, 8000],
-            "lr":[1e-3, 5e-4],
+            "n_hidden": [40, 60, 80, 100],
+            "n_layers": [2],
+            "num_epochs": [5000, 7000],
+            "lr":[5e-4, 1e-3],
             "min_delta":[2e-3],
             "n_hidden_dense": [32, 64],
         }
@@ -287,6 +287,8 @@ def main():
         gs_option["kappa"] = kappa
         model_semidanse_plus = SemiDANSEplus(**gs_option)
         tr_verbose = True
+        print("*"*100);
+        print("Config number: {}".format(i+1))
         print("Chosen value of kappa: {}".format(model_semidanse_plus.kappa))
 
         tr_verbose = True
@@ -305,7 +307,7 @@ def main():
             val_loader_unsup=val_loader_unsup,
             train_loader_sup=train_loader_sup,
             val_loader_sup=val_loader_sup,
-            options=estimator_options,
+            options=gs_option,
             nepochs=model_semidanse_plus.rnn.num_epochs,
             logfile_path=tr_logfile_name_with_path,
             modelfile_path=modelfile_path,
@@ -317,6 +319,8 @@ def main():
         #    plot_losses(tr_losses=tr_losses, val_losses=val_losses, logscale=False)
 
         gs_stats["Config_no"] = i + 1
+        gs_stats["tr_losses"] = tr_losses
+        gs_stats["val_losses"] = val_losses
         gs_stats["tr_loss_end"] = tr_losses[-1]
         gs_stats["val_loss_end"] = val_losses[-1]
         gs_stats["tr_loss_best"] = tr_loss_for_best_val_loss

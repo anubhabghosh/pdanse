@@ -33,7 +33,7 @@ def poly_hfn(x, ord=3):
     elif type(x).__module__ == torch.__name__:
         h_x = torch.zeros_like(x)
     
-    for p in range(ord):
+    for p in range(1,ord+1):
         h_x += x**p
     return h_x
 
@@ -45,9 +45,9 @@ def abs_hfn(x):
 
 def dist_sq_hfn(x):
     if type(x).__module__ == np.__name__:
-        return np.sum(np.square(x))
+        return np.sum(np.square(x)).reshape((-1,))
     elif type(x).__module__ == torch.__name__:
-        return torch.sum(torch.square(x))
+        return torch.sum(torch.square(x)).reshape((-1,))
 
 def get_measurement_fn(fn_name):
 
