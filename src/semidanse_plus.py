@@ -103,9 +103,7 @@ class SemiDANSEplus(nn.Module):
         return self.mu_xt_yt_prev, self.L_xt_yt_prev
 
     def reparameterize_and_sample_prior(self, mu_xt_yt_prev, L_xt_yt_prev):
-        eps = torch.unsqueeze(torch.randn_like(mu_xt_yt_prev), 0).repeat(
-            self.n_MC, 1, 1, 1
-        )
+        eps = torch.randn(self.n_MC, mu_xt_yt_prev.shape[0], mu_xt_yt_prev.shape[1], mu_xt_yt_prev.shape[2])
         L_xt_yt_prev_expanded = torch.repeat_interleave(
             torch.unsqueeze(L_xt_yt_prev, 0), self.n_MC, dim=0
         )
@@ -116,6 +114,7 @@ class SemiDANSEplus(nn.Module):
             torch.einsum("lntij,lntj->lnti", torch.cholesky(L_xt_yt_prev_expanded), eps)
             + mu_xt_yt_prev_expanded
         )
+
         return xt_yt_prev_expanded
 
     def compute_logpdf_Gaussian(self, input_, mean, cov):
@@ -137,6 +136,23 @@ class SemiDANSEplus(nn.Module):
 
         return logprob
 
+    def compute_log_weights_num_expanded(self, yi_batch, h_fn_xi_batch, Cw):
+        log_wts_num_seq = (
+            -0.5 * self.n_states * math.log(math.pi * 2)
+            - 0.5 * torch.logdet(Cw)
+            - 0.5
+            * torch.einsum(
+                "lnti,lnti->lnt",
+                (yi_batch - h_fn_xi_batch),
+                torch.einsum(
+                    "lntij,lntj->lnti",
+                    torch.inverse(Cw),
+                    (yi_batch - h_fn_xi_batch),
+                ),
+            )
+        )
+        return log_wts_num_seq
+    
     def compute_logpdf_Gaussian_expanded(self, input_, mean, cov):
         _, _, seq_length, _ = input_.shape
         logprob = (
@@ -163,10 +179,10 @@ class SemiDANSEplus(nn.Module):
         xt_yt_prev_test_expanded = self.reparameterize_and_sample_prior(
             mu_xt_yt_prev=mu_xt_yt_prev_test, L_xt_yt_prev=L_xt_yt_prev_test
         )
-        log_post_weights_t_num = self.compute_logpdf_Gaussian_expanded(
-            input_=Yi_test_batch.repeat(self.n_MC, 1, 1, 1),
-            mean=self.h_fn(xt_yt_prev_test_expanded),
-            cov=Cw_test_batch.unsqueeze(1)
+        log_post_weights_num_seq = self.compute_log_weights_num_expanded(
+            yi_batch=Yi_test_batch.repeat(self.n_MC, 1, 1, 1),
+            h_fn_xi_batch=self.h_fn(xt_yt_prev_test_expanded),
+            Cw=Cw_test_batch.unsqueeze(1)
             .unsqueeze(0)
             .repeat(
                 xt_yt_prev_test_expanded.shape[0],
@@ -176,18 +192,19 @@ class SemiDANSEplus(nn.Module):
                 1,
             ),
         )
-        log_post_weights_t = log_post_weights_t_num - torch.logsumexp(
-            log_post_weights_t_num, 0
+        log_post_weights_den_seq = torch.logsumexp(
+            log_post_weights_num_seq, 0
         )
+        log_post_weights_seq = log_post_weights_num_seq - log_post_weights_den_seq
         self.mu_xt_yt_current = torch.einsum(
-            "ln,lnti->nti", log_post_weights_t.exp(), xt_yt_prev_test_expanded
+            "lnt,lnti->nti", log_post_weights_seq.exp(), xt_yt_prev_test_expanded
         )
         self.residual_xt_yt_current = (
             xt_yt_prev_test_expanded - self.mu_xt_yt_current.repeat(self.n_MC, 1, 1, 1)
         )
         self.L_xt_yt_current = torch.einsum(
-            "ln,lntij->ntij",
-            log_post_weights_t.exp(),
+            "lnt,lntij->ntij",
+            log_post_weights_seq.exp(),
             torch.matmul(
                 self.residual_xt_yt_current.unsqueeze(4),
                 torch.transpose(self.residual_xt_yt_current.unsqueeze(4), 3, 4),
