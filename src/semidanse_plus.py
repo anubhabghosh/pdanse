@@ -301,9 +301,14 @@ class SemiDANSEplus(nn.Module):
             else:
                 elbo_batch_sum = 0.0
 
-        elbo_batch_avg = elbo_batch_sum / (
-            Yi_batch_unsup.size()[-3] * Yi_batch_unsup.size()[-2] * Yi_batch_unsup.size()[-1]
-        )  # Getting a per-seq length and a per-dim loss
+        if Yi_batch_unsup.shape[0] > 0:
+            elbo_batch_avg = elbo_batch_sum / (
+                Yi_batch_unsup.size()[-3] * Yi_batch_unsup.size()[-2] * Yi_batch_unsup.size()[-1]
+            )  # Getting a per-seq length and a per-dim loss
+        if Yi_batch_sup.shape[0] > 0:
+            elbo_batch_avg = elbo_batch_sum / (
+                Yi_batch_sup.size()[-3] * Yi_batch_sup.size()[-2] * Yi_batch_sup.size()[-1]
+            )  # Getting a per-seq length and a per-dim loss
         return elbo_batch_avg
 
 
@@ -403,18 +408,37 @@ def train_danse_semisupervised_plus(
             val_mse_loss_epoch_sum = 0.0
 
             n_batches_sup_train = len(train_loader_sup)
-            #n_batches_unsup_train = len(train_loader_unsup)
+            n_batches_unsup_train = len(train_loader_unsup)
             use_sup_loss_train = True
 
-            for i, (tr_data_sup, tr_data_unsup) in enumerate(
-                zip(cycle(train_loader_sup), train_loader_unsup)
-            ):
+            if n_batches_sup_train == 0:
+                tr_loader_iterator = enumerate(train_loader_unsup)
+            elif n_batches_unsup_train == 0:
+                tr_loader_iterator = enumerate(train_loader_sup)
+            else:
+                tr_loader_iterator = enumerate(zip(cycle(train_loader_sup), train_loader_unsup))
+
+            for i, tr_data in tr_loader_iterator:
+                
+                if n_batches_sup_train == 0:
+                    tr_data_unsup = tr_data
+                    tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = None, None, None
+                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data
+                elif n_batches_unsup_train == 0:
+                    tr_data_sup = tr_data
+                    tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
+                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = None, None, None
+                else:
+                    tr_data_sup = tr_data[0]
+                    tr_data_unsup = tr_data[1]
+                    tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
+                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data_unsup
+                
+                #tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
+                #tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data_unsup
+
                 if i + 1 > n_batches_sup_train:
                     use_sup_loss_train = False
-
-                tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
-                tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data_unsup
-
                 #print(
                 #    i + 1,
                 #    n_batches_sup_train,
@@ -446,7 +470,7 @@ def train_danse_semisupervised_plus(
                     .to(device)
                 )
                 X_train_batch_sup = (
-                    Variable(tr_X_batch_sup[:, :, :], requires_grad=False)
+                    Variable(tr_X_batch_sup, requires_grad=False)
                     .type(torch.FloatTensor)
                     .to(device)
                 )
