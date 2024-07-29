@@ -104,6 +104,7 @@ class SemiDANSEplus(nn.Module):
 
     def reparameterize_and_sample_prior(self, mu_xt_yt_prev, L_xt_yt_prev):
         eps = torch.randn(self.n_MC, mu_xt_yt_prev.shape[0], mu_xt_yt_prev.shape[1], mu_xt_yt_prev.shape[2])
+        eps = eps.type(torch.FloatTensor).to(self.device)
         L_xt_yt_prev_expanded = torch.repeat_interleave(
             torch.unsqueeze(L_xt_yt_prev, 0), self.n_MC, dim=0
         )
