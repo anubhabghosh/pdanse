@@ -103,7 +103,12 @@ class SemiDANSEplus(nn.Module):
         return self.mu_xt_yt_prev, self.L_xt_yt_prev
 
     def reparameterize_and_sample_prior(self, mu_xt_yt_prev, L_xt_yt_prev):
-        eps = torch.randn(self.n_MC, mu_xt_yt_prev.shape[0], mu_xt_yt_prev.shape[1], mu_xt_yt_prev.shape[2])
+        eps = torch.randn(
+            self.n_MC,
+            mu_xt_yt_prev.shape[0],
+            mu_xt_yt_prev.shape[1],
+            mu_xt_yt_prev.shape[2],
+        )
         eps = eps.type(torch.FloatTensor).to(self.device)
         L_xt_yt_prev_expanded = torch.repeat_interleave(
             torch.unsqueeze(L_xt_yt_prev, 0), self.n_MC, dim=0
@@ -153,7 +158,7 @@ class SemiDANSEplus(nn.Module):
             )
         )
         return log_wts_num_seq
-    
+
     def compute_logpdf_Gaussian_expanded(self, input_, mean, cov):
         _, _, seq_length, _ = input_.shape
         logprob = (
@@ -193,9 +198,7 @@ class SemiDANSEplus(nn.Module):
                 1,
             ),
         )
-        log_post_weights_den_seq = torch.logsumexp(
-            log_post_weights_num_seq, 0
-        )
+        log_post_weights_den_seq = torch.logsumexp(log_post_weights_num_seq, 0)
         log_post_weights_seq = log_post_weights_num_seq - log_post_weights_den_seq
         self.mu_xt_yt_current = torch.einsum(
             "lnt,lnti->nti", log_post_weights_seq.exp(), xt_yt_prev_test_expanded
@@ -304,11 +307,15 @@ class SemiDANSEplus(nn.Module):
 
         if Yi_batch_unsup.shape[0] > 0:
             elbo_batch_avg = elbo_batch_sum / (
-                Yi_batch_unsup.size()[-3] * Yi_batch_unsup.size()[-2] * Yi_batch_unsup.size()[-1]
+                Yi_batch_unsup.size()[-3]
+                * Yi_batch_unsup.size()[-2]
+                * Yi_batch_unsup.size()[-1]
             )  # Getting a per-seq length and a per-dim loss
-        if Yi_batch_sup.shape[0] > 0:
+        elif Yi_batch_sup.shape[0] > 0:
             elbo_batch_avg = elbo_batch_sum / (
-                Yi_batch_sup.size()[-3] * Yi_batch_sup.size()[-2] * Yi_batch_sup.size()[-1]
+                Yi_batch_sup.size()[-3]
+                * Yi_batch_sup.size()[-2]
+                * Yi_batch_sup.size()[-1]
             )  # Getting a per-seq length and a per-dim loss
         return elbo_batch_avg
 
@@ -410,6 +417,8 @@ def train_danse_semisupervised_plus(
 
             n_batches_sup_train = len(train_loader_sup)
             n_batches_unsup_train = len(train_loader_unsup)
+            n_batches_sup_val = len(val_loader_sup)
+            n_batches_unsup_val = len(val_loader_unsup)
             use_sup_loss_train = True
 
             if n_batches_sup_train == 0:
@@ -417,10 +426,11 @@ def train_danse_semisupervised_plus(
             elif n_batches_unsup_train == 0:
                 tr_loader_iterator = enumerate(train_loader_sup)
             else:
-                tr_loader_iterator = enumerate(zip(cycle(train_loader_sup), train_loader_unsup))
+                tr_loader_iterator = enumerate(
+                    zip(cycle(train_loader_sup), train_loader_unsup)
+                )
 
             for i, tr_data in tr_loader_iterator:
-                
                 if n_batches_sup_train == 0:
                     tr_data_unsup = tr_data
                     tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = None, None, None
@@ -428,19 +438,25 @@ def train_danse_semisupervised_plus(
                 elif n_batches_unsup_train == 0:
                     tr_data_sup = tr_data
                     tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
-                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = None, None, None
+                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = (
+                        None,
+                        None,
+                        None,
+                    )
                 else:
                     tr_data_sup = tr_data[0]
                     tr_data_unsup = tr_data[1]
                     tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
-                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data_unsup
-                
-                #tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
-                #tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data_unsup
+                    tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = (
+                        tr_data_unsup
+                    )
+
+                # tr_Y_batch_sup, tr_X_batch_sup, tr_Cw_batch_sup = tr_data_sup
+                # tr_Y_batch_unsup, tr_X_batch_unsup, tr_Cw_batch_unsup = tr_data_unsup
 
                 if i + 1 > n_batches_sup_train:
                     use_sup_loss_train = False
-                #print(
+                # print(
                 #    i + 1,
                 #    n_batches_sup_train,
                 #    n_batches_unsup_train,
@@ -451,13 +467,13 @@ def train_danse_semisupervised_plus(
                 #    tr_Cw_batch_unsup.shape,
                 #    tr_Cw_batch_sup.shape,
                 #    file=orig_stdout,
-                #)
-                #print("Supervision flag (train) status: {}".format(use_sup_loss_train))
-                #print(
+                # )
+                # print("Supervision flag (train) status: {}".format(use_sup_loss_train))
+                # print(
                 #    "Supervision flag (train) status: {}".format(use_sup_loss_train),
                 #    file=orig_stdout,
-                #)
-                
+                # )
+
                 optimizer.zero_grad()
 
                 Y_train_batch_sup = (
@@ -538,8 +554,7 @@ def train_danse_semisupervised_plus(
                     # print("Epoch: {}/{}, Batch index: {}, Training loss: {}".format(epoch+1, nepochs, i+1, tr_running_loss / 100))
                     # print("Epoch: {}/{}, Batch index: {}, Training loss: {}".format(epoch+1, nepochs, i+1, tr_running_loss / 100), file=orig_stdout)
                     tr_running_loss = 0.0
-                
-        
+
             scheduler.step()
 
             endtime = timer()
@@ -547,20 +562,57 @@ def train_danse_semisupervised_plus(
             time_elapsed = endtime - starttime
 
             n_batches_sup_val = len(val_loader_sup)
-            # n_batches_unsup_val = len(val_loader_unsup)
+            n_batches_unsup_val = len(val_loader_unsup)
             use_sup_loss_val = True
 
-            with torch.no_grad():
-                for i, (val_data_sup, val_data_unsup) in enumerate(
+            if n_batches_sup_val == 0:
+                val_loader_iterator = enumerate(val_loader_unsup)
+            elif n_batches_unsup_val == 0:
+                val_loader_iterator = enumerate(val_loader_sup)
+            else:
+                val_loader_iterator = enumerate(
                     zip(cycle(val_loader_sup), val_loader_unsup)
-                ):
+                )
+
+            with torch.no_grad():
+                for i, val_data in val_loader_iterator:
+                    if n_batches_sup_val == 0:
+                        val_data_unsup = val_data
+                        val_Y_batch_sup, val_X_batch_sup, val_Cw_batch_sup = (
+                            None,
+                            None,
+                            None,
+                        )
+                        val_Y_batch_unsup, val_X_batch_unsup, val_Cw_batch_unsup = (
+                            val_data
+                        )
+                    elif n_batches_unsup_train == 0:
+                        val_data_sup = val_data
+                        val_Y_batch_sup, val_X_batch_sup, val_Cw_batch_sup = (
+                            val_data_sup
+                        )
+                        val_Y_batch_unsup, val_X_batch_unsup, val_Cw_batch_unsup = (
+                            None,
+                            None,
+                            None,
+                        )
+                    else:
+                        val_data_sup = val_data[0]
+                        val_data_unsup = val_data[1]
+                        val_Y_batch_sup, val_X_batch_sup, val_Cw_batch_sup = (
+                            val_data_sup
+                        )
+                        val_Y_batch_unsup, val_X_batch_unsup, val_Cw_batch_unsup = (
+                            val_data_unsup
+                        )
+
                     if i + 1 > n_batches_sup_val:
                         use_sup_loss_val = False
 
-                    val_Y_batch_sup, val_X_batch_sup, val_Cw_batch_sup = val_data_sup
-                    val_Y_batch_unsup, val_X_batch_unsup, val_Cw_batch_unsup = (
-                        val_data_unsup
-                    )
+                    # val_Y_batch_sup, val_X_batch_sup, val_Cw_batch_sup = val_data_sup
+                    # val_Y_batch_unsup, val_X_batch_unsup, val_Cw_batch_unsup = (
+                    #    val_data_unsup
+                    # )
 
                     Y_val_batch_sup = (
                         Variable(val_Y_batch_sup, requires_grad=False)
@@ -568,7 +620,7 @@ def train_danse_semisupervised_plus(
                         .to(device)
                     )
                     X_val_batch_sup = (
-                        Variable(val_X_batch_sup[:, :, :], requires_grad=False)
+                        Variable(val_X_batch_sup, requires_grad=False)
                         .type(torch.FloatTensor)
                         .to(device)
                     )
@@ -584,7 +636,7 @@ def train_danse_semisupervised_plus(
                         .to(device)
                     )
                     X_val_batch_unsup = (
-                        Variable(val_X_batch_unsup[:, :, :], requires_grad=False)
+                        Variable(val_X_batch_unsup, requires_grad=False)
                         .type(torch.FloatTensor)
                         .to(device)
                     )
@@ -593,27 +645,51 @@ def train_danse_semisupervised_plus(
                         .type(torch.FloatTensor)
                         .to(device)
                     )
+                    if n_batches_unsup_val == 0:
+                        (
+                            val_mu_X_predictions_batch,
+                            val_var_X_predictions_batch,
+                            val_mu_X_filtered_batch,
+                            val_var_X_filtered_batch,
+                        ) = model.compute_predictions(Y_val_batch_sup, Cw_val_batch_sup)
 
-                    (
-                        val_mu_X_predictions_batch,
-                        val_var_X_predictions_batch,
-                        val_mu_X_filtered_batch,
-                        val_var_X_filtered_batch,
-                    ) = model.compute_predictions(Y_val_batch_unsup, Cw_val_batch_unsup)
+                        val_mse_loss_batch = mse_criterion(
+                            X_val_batch_sup.to(device), val_mu_X_filtered_batch
+                        )
 
-                    log_pXY_val_batch_avg = -model.forward(
-                        Y_val_batch_unsup,
-                        Y_val_batch_sup,
-                        X_val_batch_sup,
-                        Cw_val_batch_unsup,
-                        Cw_val_batch_sup,
-                        use_sup_loss_val,
-                    )
+                        log_pXY_val_batch_avg = -model.forward(
+                            Y_val_batch_unsup,
+                            Y_val_batch_sup,
+                            X_val_batch_sup,
+                            Cw_val_batch_unsup,
+                            Cw_val_batch_sup,
+                            use_sup_loss_val,
+                            use_unsup_loss=False
+                        )
+
+                    else:
+                        (
+                            val_mu_X_predictions_batch,
+                            val_var_X_predictions_batch,
+                            val_mu_X_filtered_batch,
+                            val_var_X_filtered_batch,
+                        ) = model.compute_predictions(Y_val_batch_unsup, Cw_val_batch_unsup)
+                        
+                        val_mse_loss_batch = mse_criterion(
+                            X_val_batch_unsup.to(device), val_mu_X_filtered_batch
+                        )
+
+                        log_pXY_val_batch_avg = -model.forward(
+                            Y_val_batch_unsup,
+                            Y_val_batch_sup,
+                            X_val_batch_sup,
+                            Cw_val_batch_unsup,
+                            Cw_val_batch_sup,
+                            use_sup_loss_val,
+                            use_unsup_loss=True
+                        )
+                        
                     val_loss_epoch_sum += log_pXY_val_batch_avg.item()
-
-                    val_mse_loss_batch = mse_criterion(
-                        X_val_batch_unsup.to(device), val_mu_X_filtered_batch
-                    )
                     # print statistics
                     val_mse_loss_epoch_sum += val_mse_loss_batch.item()
 
@@ -637,8 +713,13 @@ def train_danse_semisupervised_plus(
             # Displaying loss at an interval of 200 epochs
             if tr_verbose is True and (((epoch + 1) % 50) == 0 or epoch == 0):
                 print(
-                        "Epoch: {}/{}, Training NLL:{:.9f}, Val. NLL:{:.9f}, Val. MSE:{:.9f}, Time_Elapsed:{:.4f} secs".format(
-                        epoch + 1, model.rnn.num_epochs, tr_loss, val_loss, val_mse_loss, time_elapsed
+                    "Epoch: {}/{}, Training NLL:{:.9f}, Val. NLL:{:.9f}, Val. MSE:{:.9f}, Time_Elapsed:{:.4f} secs".format(
+                        epoch + 1,
+                        model.rnn.num_epochs,
+                        tr_loss,
+                        val_loss,
+                        val_mse_loss,
+                        time_elapsed,
                     ),
                     file=orig_stdout,
                 )
@@ -763,7 +844,7 @@ def train_danse_semisupervised_plus(
         # elif save_chkpoints == False:
         elif save_chkpoints is None:
             pass
-        
+
     except KeyboardInterrupt:
         if tr_verbose is True:
             print(
