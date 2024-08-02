@@ -119,7 +119,7 @@ class Nonlinear1DSSM(object):
         self.Cw = sigma_w2 * np.eye(self.n_obs)
 
     def generate_driving_noise(self, k):
-        u_k = np.cos(self.c * k)  # Previous idea (considering start at k=0)
+        u_k = self.c * np.cos(1.2 * k)  # Previous idea (considering start at k=0)
         # u_k = np.cos(self.c * (k+1))  # Current modification (considering start at k=0)
         return u_k
 
@@ -139,7 +139,7 @@ class Nonlinear1DSSM(object):
         return x_k_arr
 
     def generate_measurement_sequence(self, x_k_arr, T, smnr_dB):
-        signal_power = np.var(self.h_fn(x_k_arr))
+        signal_power = np.var(self.d * self.h_fn(x_k_arr))
         self.sigma_w2 = signal_power / dB_to_lin(smnr_dB)
         self.setMeasurementCov(sigma_w2=self.sigma_w2)
         w_k_arr = np.random.multivariate_normal(mean=self.mu_w, cov=self.Cw, size=(T,))
@@ -152,6 +152,7 @@ class Nonlinear1DSSM(object):
 
     def generate_single_sequence(self, T, sigma_e2_dB, smnr_dB):
         x_seq = self.generate_state_sequence(T=T, sigma_e2_dB=sigma_e2_dB)
+        #x_seq = (x_seq - np.mean(x_seq, 0)) / np.std(x_seq, 0)
         y_seq = self.generate_measurement_sequence(x_k_arr=x_seq, T=T, smnr_dB=smnr_dB)
         # print(x_lorenz.shape, y_lorenz.shape)
         return x_seq, y_seq, self.Cw

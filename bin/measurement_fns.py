@@ -12,11 +12,17 @@ sys.path.append(PARENT_DIR)
 def identity_hfn(x):
     return x
 
+def splice32_hfn(x):
+    return x[...,0:2] 
+
+def splice31_hfn(x):
+    return x[...,0:1]
+
 def square_hfn(x):
     if type(x).__module__ == np.__name__:
-        return np.square(x)
+        return np.square(x) #np.square(x+5) 
     elif type(x).__module__ == torch.__name__:
-        return torch.square(x)
+        return torch.square(x) #torch.square(x+5)
 
 def sigmoid_hfn(x):
     if type(x).__module__ == np.__name__:
@@ -25,7 +31,7 @@ def sigmoid_hfn(x):
         return 1.0 / (1.0 + torch.exp(-x))
 
 def cubic_hfn(x):
-    return x**3
+    return (x)**3
 
 def poly_hfn(x, ord=3):
     if type(x).__module__ == np.__name__:
@@ -58,6 +64,8 @@ def get_measurement_fn(fn_name):
         "poly": poly_hfn,
         "abs": abs_hfn,
         "dist_sq": dist_sq_hfn,
+        "splice32": splice32_hfn,
+        "splice31": splice31_hfn,
         "sigmoid":sigmoid_hfn
     }
 
