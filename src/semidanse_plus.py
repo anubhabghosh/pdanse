@@ -200,11 +200,13 @@ class SemiDANSEplus(nn.Module):
         )
         log_post_weights_den_seq = torch.logsumexp(log_post_weights_num_seq, 0)
         log_post_weights_seq = log_post_weights_num_seq - log_post_weights_den_seq
+        #log_post_weights_seq_mean = log_post_weights_seq.unsqueeze(3).repeat(1,1,1,xt_yt_prev_test_expanded.shape[-1])
+        #self.mu_xt_yt_current = (log_post_weights_seq_mean.exp() * xt_yt_prev_test_expanded).sum(0)
         self.mu_xt_yt_current = torch.einsum(
             "lnt,lnti->nti", log_post_weights_seq.exp(), xt_yt_prev_test_expanded
         )
         self.residual_xt_yt_current = (
-            xt_yt_prev_test_expanded - self.mu_xt_yt_current.repeat(self.n_MC, 1, 1, 1)
+            xt_yt_prev_test_expanded - self.mu_xt_yt_current.unsqueeze(0).repeat(self.n_MC, 1, 1, 1)
         )
         self.L_xt_yt_current = torch.einsum(
             "lnt,lntij->ntij",
@@ -711,7 +713,7 @@ def train_danse_semisupervised_plus(
                 model_monitor.record(val_loss)
 
             # Displaying loss at an interval of 200 epochs
-            if tr_verbose is True and (((epoch + 1) % 50) == 0 or epoch == 0):
+            if tr_verbose is True and (((epoch + 1) % 100) == 0 or epoch == 0):
                 print(
                     "Epoch: {}/{}, Training NLL:{:.9f}, Val. NLL:{:.9f}, Val. MSE:{:.9f}, Time_Elapsed:{:.4f} secs".format(
                         epoch + 1,
