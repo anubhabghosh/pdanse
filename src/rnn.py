@@ -57,6 +57,9 @@ class RNN_model(nn.Module):
             print("Model type unknown:", model_type.lower()) 
             sys.exit() 
         
+        # Adding a BatchNorm1d layer
+        #self.norm1d = nn.InstanceNorm1d(num_features=self.input_size).to(self.device)
+
         # Fully connected layer to be used for mapping the output
         #self.fc = nn.Linear(self.hidden_dim * self.num_directions, self.output_size)
         
@@ -78,6 +81,9 @@ class RNN_model(nn.Module):
         """
         batch_size = x.shape[0]
         
+        # Permute the input and feed it to batch norm 1d
+        #x = self.norm1d(x.permute(0, 2, 1)).permute(0, 2, 1)
+
         # Obtain the RNN output
         r_out, _ = self.rnn(x)
         
@@ -85,15 +91,15 @@ class RNN_model(nn.Module):
         r_out_all_steps = r_out.contiguous().view(batch_size, -1, self.num_directions * self.hidden_dim)
 
         # Passing the output to one fully connected layer
-        y = F.relu(self.fc(r_out_all_steps))
+        y = F.softplus(self.fc(r_out_all_steps))
 
         # Means and variances are computed for time instants t=2, ..., T+1 using the available sequence
         mu_2T_1 = self.fc_mean(y) # A second linear projection to get the means
         vars_2T_1 = F.softplus(self.fc_vars(y)) # A second linear projection followed by an activation function to get variances
 
         # The mean and variances at the first time step need to be computed only based on the previous hidden state
-        mu_1 = self.fc_mean(F.relu(self.fc(self.init_h0(batch_size)[-1,:,:]))).view(batch_size, 1, -1)
-        var_1 = F.softplus(self.fc_vars(F.relu(self.fc(self.init_h0(batch_size)[-1,:,:]))).view(batch_size, 1, -1))
+        mu_1 = self.fc_mean(F.softplus(self.fc(self.init_h0(batch_size)[-1,:,:]))).view(batch_size, 1, -1)
+        var_1 = F.softplus(self.fc_vars(F.softplus(self.fc(self.init_h0(batch_size)[-1,:,:]))).view(batch_size, 1, -1))
 
         # To get the means and variances for the time instants t=1, ..., T, we take the previous result and concatenate 
         # all but last value to the value found at t=1. Concatenation is done along the sequence dimension

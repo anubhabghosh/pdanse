@@ -152,9 +152,7 @@ class Nonlinear1DSSM(object):
 
     def generate_single_sequence(self, T, sigma_e2_dB, smnr_dB):
         x_seq = self.generate_state_sequence(T=T, sigma_e2_dB=sigma_e2_dB)
-        #x_seq = (x_seq - np.mean(x_seq, 0)) / np.std(x_seq, 0)
         y_seq = self.generate_measurement_sequence(x_k_arr=x_seq, T=T, smnr_dB=smnr_dB)
-        # print(x_lorenz.shape, y_lorenz.shape)
         return x_seq, y_seq, self.Cw
 
 

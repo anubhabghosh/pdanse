@@ -23,6 +23,12 @@ def square_hfn(x):
         return np.square(x) #np.square(x+5) 
     elif type(x).__module__ == torch.__name__:
         return torch.square(x) #torch.square(x+5)
+    
+def scaled_square_hfn(x, d=1.0/20):
+    if type(x).__module__ == np.__name__:
+        return d * np.square(x) #np.square(x+5) 
+    elif type(x).__module__ == torch.__name__:
+        return d * torch.square(x) #torch.square(x+5)
 
 def sigmoid_hfn(x):
     if type(x).__module__ == np.__name__:
@@ -60,10 +66,11 @@ def get_measurement_fn(fn_name):
     MEASUREMENT_FN_LIST = {  
         "identity": identity_hfn,  
         "square": square_hfn,
+        "scaledsquare": square_hfn,
         "cubic": cubic_hfn,
         "poly": poly_hfn,
         "abs": abs_hfn,
-        "dist_sq": dist_sq_hfn,
+        "distsq": dist_sq_hfn,
         "splice32": splice32_hfn,
         "splice31": splice31_hfn,
         "sigmoid":sigmoid_hfn
