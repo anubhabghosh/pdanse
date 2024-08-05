@@ -30,6 +30,9 @@ def scaled_square_hfn(x, d=1.0/20):
     elif type(x).__module__ == torch.__name__:
         return d * torch.square(x) #torch.square(x+5)
 
+def scaled_cubic_hfn(x, d=1.0/20):
+    return d * x**3 
+
 def sigmoid_hfn(x):
     if type(x).__module__ == np.__name__:
         return 1.0 / (1.0 + np.exp(-x))

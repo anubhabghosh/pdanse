@@ -146,7 +146,7 @@ class Nonlinear1DSSM(object):
         y_k_arr = np.zeros((T, self.n_obs))
 
         for t in range(0, T):
-            y_k_arr[t] = self.d * self.h_fn(x_k_arr[t]) + w_k_arr[t]
+            y_k_arr[t] = self.h_fn(x_k_arr[t]) + w_k_arr[t]
 
         return y_k_arr
 
