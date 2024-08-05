@@ -69,7 +69,8 @@ def get_measurement_fn(fn_name):
     MEASUREMENT_FN_LIST = {  
         "identity": identity_hfn,  
         "square": square_hfn,
-        "scaledsquare": square_hfn,
+        "scaledsquare": scaled_square_hfn,
+        "scaledcubic": scaled_cubic_hfn,
         "cubic": cubic_hfn,
         "poly": poly_hfn,
         "abs": abs_hfn,
