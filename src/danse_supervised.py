@@ -11,7 +11,7 @@ import sys
 import copy
 import math
 import os
-from utils.utils import compute_log_prob_normal, create_diag, compute_inverse, count_params, ConvergenceMonitor
+from utils.utils import create_diag,  count_params, ConvergenceMonitor
 #from utils.plot_functions import plot_state_trajectory, plot_state_trajectory_axes
 import torch.nn.functional as F
 from src.rnn import RNN_model

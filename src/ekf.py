@@ -76,7 +76,7 @@ class EKF(nn.Module):
         # Trying QR decomposition to get Pk_neg from Pk_pos
         #F_k_prev = self.compute_jac_f_k(x_=self.x_hat_pos_k[0]).to(self.device).squeeze(-1)
         
-        if self.use_Taylor == True: # Case of Lorenz model 
+        if self.use_Taylor is True: # Case of Lorenz model 
             F_k_prev = self.f_linearize(x=self.x_hat_pos_k).to(self.device)
         else:
             F_k_prev = self.compute_jac_f_k(x_=self.x_hat_pos_k).to(self.device)
@@ -95,7 +95,7 @@ class EKF(nn.Module):
 
         return self.x_hat_neg_k, self.Pk_neg
 
-    def filtered_estimate(self, y_k):
+    def filtered_estimate(self, y_k, R_k=None):
         """ This function implements the filtering step of the Kalman filter
         Args:
             y_k: The measurement at time instant k 
@@ -103,6 +103,7 @@ class EKF(nn.Module):
             _type_: _description_
         """
         
+        self.R_k = self.push_to_device(R_k)
         self.H_k = self.compute_jac_h_k(x_=self.x_hat_neg_k).to(self.device)
         assert self.H_k.shape[1] == self.n_states, "Dimension of H_k is not consistent"
 
@@ -138,7 +139,7 @@ class EKF(nn.Module):
         H_k = autograd.functional.jacobian(self.h_k, x_)
         return H_k
 
-    def run_mb_filter(self, X, Y):
+    def run_mb_filter(self, X, Y, Cw):
         
         _, Ty, dy = Y.shape
         _, Tx, dx = X.shape
@@ -160,7 +161,8 @@ class EKF(nn.Module):
 
                 x_rec_hat_neg_k, Pk_neg = self.predict_estimate(Pk_pos_prev=self.Pk_pos, Q_k_prev=self.Q_k)
                 
-                x_rec_hat_pos_k, Pk_pos = self.filtered_estimate(y_k=Y[i,k].view(-1,1))
+                x_rec_hat_pos_k, Pk_pos = self.filtered_estimate(y_k=Y[i,k].view(-1,1),
+                                                                 R_k=Cw[i])
             
                 # Save filtered state estimates
                 traj_estimated[i,k,:] = x_rec_hat_pos_k.view(-1,)

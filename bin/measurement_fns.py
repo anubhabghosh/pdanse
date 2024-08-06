@@ -39,6 +39,12 @@ def sigmoid_hfn(x):
     elif type(x).__module__ == torch.__name__:
         return 1.0 / (1.0 + torch.exp(-x))
 
+def relu_hfn(x):
+    if type(x).__module__ == np.__name__:
+        return np.maximum(0,x)
+    elif type(x).__module__ == torch.__name__:
+        return torch.relu(x)
+
 def cubic_hfn(x):
     return (x)**3
 
@@ -69,6 +75,7 @@ def get_measurement_fn(fn_name):
     MEASUREMENT_FN_LIST = {  
         "identity": identity_hfn,  
         "square": square_hfn,
+        "relu":relu_hfn,
         "scaledsquare": scaled_square_hfn,
         "scaledcubic": scaled_cubic_hfn,
         "cubic": cubic_hfn,

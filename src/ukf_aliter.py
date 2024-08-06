@@ -95,7 +95,7 @@ class UKF_Aliter(nn.Module):
     def get_sigma_points(self):
         self.sigma_points = MerweScaledSigmaPoints(self.n_states, alpha=self.alpha, beta=self.beta, kappa=self.kappa)
 
-    def run_mb_filter(self, X, Y, U=None):
+    def run_mb_filter(self, X, Y, Cw, U=None):
 
         _, Ty, dy = Y.shape
         _, Tx, dx = X.shape
@@ -114,8 +114,10 @@ class UKF_Aliter(nn.Module):
         MSE_UKF_linear_arr = torch.zeros((N,)).type(torch.FloatTensor)
         # points = JulierSigmaPoints(n=SysModel.m)
         
+
         start = timer()
         for i in range(0, N):
+            self.ukf.R = Cw[i]
             self.initialize()
             #if self.init_cond is not None:
             #    self.ukf.x = torch.unsqueeze(self.init_cond[i, :], 1).numpy()
