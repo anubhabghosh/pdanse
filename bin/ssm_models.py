@@ -139,7 +139,7 @@ class Nonlinear1DSSM(object):
         return x_k_arr
 
     def generate_measurement_sequence(self, x_k_arr, T, smnr_dB):
-        signal_power = np.var(self.d * self.h_fn(x_k_arr))
+        signal_power = np.var(self.h_fn(x_k_arr))
         self.sigma_w2 = signal_power / dB_to_lin(smnr_dB)
         self.setMeasurementCov(sigma_w2=self.sigma_w2)
         w_k_arr = np.random.multivariate_normal(mean=self.mu_w, cov=self.Cw, size=(T,))

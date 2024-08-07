@@ -352,7 +352,7 @@ def train_danse_semisupervised_plus(
     # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.998)
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=nepochs//3, gamma=0.9) # gamma was initially 0.9
     scheduler = optim.lr_scheduler.StepLR(
-        optimizer, step_size=nepochs // 6, gamma=0.9
+        optimizer, step_size=nepochs // 6, gamma=0.8
     )  # gamma is now set to 0.8
     tr_losses = []
     val_losses = []
