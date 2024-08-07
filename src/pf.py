@@ -21,7 +21,6 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         Q=None,
         R=None,
         n_particles=100,
-        delta_t=1.0,
         device="cpu",
     ):
         # Initialize the device

@@ -50,6 +50,8 @@ from config.parameters_opt import (
     f_chen_ukf,
     f_rossler,
     f_rossler_ukf,
+    f_nonlinear1d,
+    f_nonlinear1d_ukf,
     J_TEST,
     DELTA_T_LORENZ63,
     DELTA_T_CHEN,
@@ -62,12 +64,9 @@ from config.parameters_opt import (
 from bin.generate_data import LorenzSSM, RosslerSSM, Nonlinear1DSSM
 from test_ekf_ssm import test_ekf_ssm
 from test_ukf_ssm import test_ukf_ssm
+from test_pf_ssm import test_pf_ssm
 from test_ukf_ssm_one_step import test_ukf_ssm_one_step
-from test_danse_ssm import (
-    test_danse_ssm,
-    test_danse_semisupervised_ssm,
-    test_danse_supervised_ssm,
-)
+from test_danse_ssm import test_danse_semisupervised_plus_ssm
 from test_kalmannet_ssm import test_kalmannet_ssm
 from test_dmm_causal_ssm import test_dmm_causal_ssm
 from get_one_step_ahead_lin_meas import get_y_pred_linear_meas
@@ -105,7 +104,9 @@ def get_f_function(ssm_type):
     elif "RosslerSSM" in ssm_type:
         f_fn = f_rossler
         f_ukf_fn = f_rossler_ukf
-
+    elif "Nonlinear1DSSM" in ssm_type:
+        f_fn = f_nonlinear1d
+        f_ukf_fn = f_nonlinear1d_ukf
     return f_fn, f_ukf_fn
 
 
@@ -127,11 +128,6 @@ def test_on_ssm_model(
         if "danse_supervised" in models_list
         else None
     )
-    model_file_saved_danse_semisupervised = (
-        learnable_model_files["danse_semisupervised"]
-        if "danse_semisupervised" in models_list
-        else None
-    )
     model_file_saved_danse_semisupervised_plus = (
         learnable_model_files["danse_semisupervised_plus"]
         if "danse_semisupervised_plus" in models_list
@@ -144,9 +140,9 @@ def test_on_ssm_model(
         learnable_model_files["dmm_st-l"] if "dmm_st-l" in models_list else None
     )
 
-    ssm_type, rnn_type, m, n, T, _, sigma_e2_dB, smnr_dB = parse(
-        "{}_danse_opt_{}_m_{:d}_n_{:d}_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB",
-        model_file_saved_danse.split("/")[-2],
+    ssm_type, h_fn_type, rnn_type, m, n, T, _, sigma_e2_dB, smnr_dB = parse(
+        "{}_danse_semisupervised_opt_{}_m_{:d}_n_{:d}_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB",
+        model_file_saved_danse_semisupervised_plus.split("/")[-2],
     )
 
     J = 5
@@ -166,7 +162,16 @@ def test_on_ssm_model(
             file=orig_stdout,
         )
         # My own data generation scheme
-        m, n, ssm_name_test, h_fn_type_test, T_test, N_test, sigma_e2_dB_test, smnr_dB_test = parse(
+        (
+            m,
+            n,
+            ssm_name_test,
+            h_fn_type_test,
+            T_test,
+            N_test,
+            sigma_e2_dB_test,
+            smnr_dB_test,
+        ) = parse(
             "test_trajectories_m_{:d}_n_{:d}_{}_{}_data_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB.pkl",
             test_data_file.split("/")[-1],
         )
@@ -175,9 +180,11 @@ def test_on_ssm_model(
         Y = torch.zeros((N_test, T_test, n))
         Cw = torch.zeros((N_test, n, n))
 
-        ssm_dict, _ = get_parameters(n_states=m, n_obs=n, measurment_fn_type=h_fn_type_test, device="cpu")
+        ssm_dict, _ = get_parameters(
+            n_states=m, n_obs=n, measurment_fn_type=h_fn_type_test, device="cpu"
+        )
         ssm_model_test_dict = ssm_dict[ssm_name_test]
-        f_fn, f_ukf_fn = get_f_function(ssm_type)
+        f_fn, f_ukf_fn = get_f_function(ssm_name_test)
 
         if "LorenzSSM" in ssm_type:
             delta = DELTA_T_LORENZ63  # If decimate is True, then set this delta to 1e-5 and run it for long time
@@ -251,6 +258,10 @@ def test_on_ssm_model(
                 mu_w=ssm_model_test_dict["mu_w"],
             )
             decimation_factor = DECIMATION_FACTOR_ROSSLER
+            u_test = torch.Tensor(
+                [ssm_model_test.generate_driving_noise(k) for k in range(T_test)]
+            ).type(torch.FloatTensor)
+            U_test = u_test.unsqueeze(0).repeat(N_test, 1, 1)
 
         print(
             "Test data generated using sigma_e2: {} dB, SMNR: {} dB".format(
@@ -290,6 +301,10 @@ def test_on_ssm_model(
         Cw = test_data_dict["Cw"]
         ssm_model_test = test_data_dict["model"]
         f_fn, f_ukf_fn = get_f_function(ssm_type)
+
+    assert (
+        h_fn_type == h_fn_type_test
+    ), "Loaded model and test data are not corresponding to the same type of measurement fn. in the dataset"
 
     print("*" * 100)
     print("*" * 100, file=orig_stdout)
@@ -379,6 +394,25 @@ def test_on_ssm_model(
     else:
         X_estimated_ekf, Pk_estimated_ekf, _, time_elapsed_ekf = None, None, None, None
 
+    # Estimator: PF
+    if "pf" in models_list:
+        print("Testing PF ...", file=orig_stdout)
+        X_estimated_pf, Pk_estimated_pf, mse_arr_pf, time_elapsed_pf = test_pf_ssm(
+            X_test=X,
+            Y_test=Y,
+            ssm_model_test=ssm_model_test,
+            f_fn=f_fn,
+            h_fn=get_measurement_fn(fn_name=h_fn_type_test),
+            Cw_test=Cw,
+            device=device,
+            use_Taylor=use_Taylor,
+            U_test=U_test if "Nonlinear1DSSM" in ssm_type else None,
+        )
+        X_estimated_dict["pf"]["est"] = X_estimated_pf
+        X_estimated_dict["pf"]["est_cov"] = Pk_estimated_pf
+    else:
+        X_estimated_pf, Pk_estimated_pf, _, time_elapsed_pf = None, None, None, None
+
     # Estimator: UKF
     if "ukf" in models_list:
         print("Testing UKF ...", file=orig_stdout)
@@ -394,7 +428,7 @@ def test_on_ssm_model(
         X_estimated_dict["ukf"]["est"] = X_estimated_ukf
         X_estimated_dict["ukf"]["est_cov"] = Pk_estimated_ukf
 
-        '''
+        """
         X_estimated_ukf_pred, Pk_estimated_ukf_pred, _, _, _, _, _, _, _ = (
             test_ukf_ssm_one_step(
                 X_test=X,
@@ -412,7 +446,7 @@ def test_on_ssm_model(
             Cw_test=Cw,
             ssm_model_test=ssm_model_test,
         )
-        '''
+        """
         Y_estimated_ukf_pred, Py_estimated_ukf_pred = None, None
     else:
         X_estimated_ukf, Pk_estimated_ukf, _, time_elapsed_ukf = None, None, None, None
@@ -420,122 +454,50 @@ def test_on_ssm_model(
     #####################################################################################################################################################################
 
     #####################################################################################################################################################################
-    # Estimator: DANSE
-    if "danse" in models_list:
-        print("Testing DANSE ...", file=orig_stdout)
+    # Estimator: DANSE Semisupervised Plus
+    if "danse_semisupervised_plus" in models_list:
+        print("Testing DANSE (Semi-Supervised +) ...", file=orig_stdout)
         (
-            X_estimated_pred,
-            Pk_estimated_pred,
-            X_estimated_filtered,
-            Pk_estimated_filtered,
-            time_elapsed_danse,
-        ) = test_danse_ssm(
+            X_estimated_pred_danse_semisupervised_plus,
+            Pk_estimated_pred_danse_semisupervised_plus,
+            X_estimated_filtered_danse_semisupervised_plus,
+            Pk_estimated_filtered_danse_semisupervised_plus,
+            time_elapsed_danse_danse_semisupervised_plus,
+        ) = test_danse_semisupervised_plus_ssm(
             Y_test=Y,
             ssm_model_test=ssm_model_test,
-            model_file_saved_danse=model_file_saved_danse,
+            h_fn_type=h_fn_type_test,
+            model_file_saved_danse_semisupervised=model_file_saved_danse_semisupervised_plus,
             Cw_test=Cw,
             rnn_type=rnn_type,
             device=device,
         )
-        X_estimated_dict["danse"]["est"] = X_estimated_filtered
-        X_estimated_dict["danse"]["est_cov"] = Pk_estimated_filtered
-        Y_estimated_pred, Py_estimated_pred = get_y_pred_linear_meas(
-            X_estimated_pred_test=X_estimated_pred,
-            Pk_estimated_pred_test=Pk_estimated_pred,
-            Cw_test=Cw,
-            ssm_model_test=ssm_model_test,
+        X_estimated_dict["danse_semisupervised_plus"]["est"] = (
+            X_estimated_filtered_danse_semisupervised_plus
         )
-
-    else:
-        (
-            X_estimated_pred,
-            Pk_estimated_pred,
-            X_estimated_filtered,
-            Pk_estimated_filtered,
-            time_elapsed_danse,
-        ) = None, None, None, None, None
-        Y_estimated_pred, Py_estimated_pred = None, None
-
-    #####################################################################################################################################################################
-
-    #####################################################################################################################################################################
-    # Estimator: DANSE Supervised
-    if "danse_supervised" in models_list:
-        print("Testing DANSE (Supervised) ...", file=orig_stdout)
-        (
-            X_estimated_pred_danse_supervised,
-            Pk_estimated_pred_danse_supervised,
-            X_estimated_filtered_danse_supervised,
-            Pk_estimated_filtered_danse_supervised,
-            time_elapsed_danse_supervised,
-        ) = test_danse_supervised_ssm(
-            Y_test=Y,
-            ssm_model_test=ssm_model_test,
-            model_file_saved_danse_supervised=model_file_saved_danse_supervised,
-            Cw_test=Cw,
-            rnn_type=rnn_type,
-            device=device,
-        )
-        X_estimated_dict["danse_supervised"]["est"] = (
-            X_estimated_filtered_danse_supervised
-        )
-        X_estimated_dict["danse_supervised"]["est_cov"] = (
-            Pk_estimated_filtered_danse_supervised
-        )
-    else:
-        (
-            _,
-            _,
-            X_estimated_filtered_danse_supervised,
-            Pk_estimated_filtered_danse_supervised,
-            time_elapsed_danse_supervised,
-        ) = None, None, None, None, None
-    #####################################################################################################################################################################
-
-    #####################################################################################################################################################################
-    # Estimator: DANSE Semisupervised
-    if "danse_semisupervised" in models_list:
-        print("Testing DANSE (Semi-Supervised) ...", file=orig_stdout)
-        (
-            X_estimated_pred_danse_semisupervised,
-            Pk_estimated_pred_danse_semisupervised,
-            X_estimated_filtered_danse_semisupervised,
-            Pk_estimated_filtered_danse_semisupervised,
-            time_elapsed_danse_danse_semisupervised,
-        ) = test_danse_semisupervised_ssm(
-            Y_test=Y,
-            ssm_model_test=ssm_model_test,
-            model_file_saved_danse_semisupervised=model_file_saved_danse_semisupervised,
-            Cw_test=Cw,
-            rnn_type=rnn_type,
-            device=device,
-        )
-        X_estimated_dict["danse_semisupervised"]["est"] = (
-            X_estimated_filtered_danse_semisupervised
-        )
-        X_estimated_dict["danse_semisupervised"]["est_cov"] = (
-            Pk_estimated_filtered_danse_semisupervised
+        X_estimated_dict["danse_semisupervised_plus"]["est_cov"] = (
+            Pk_estimated_filtered_danse_semisupervised_plus
         )
         (
-            Y_estimated_pred_danse_semisupervised,
-            Py_estimated_pred_danse_semisupervised,
+            Y_estimated_pred_danse_semisupervised_plus,
+            Py_estimated_pred_danse_semisupervised_plus,
         ) = get_y_pred_linear_meas(
-            X_estimated_pred_test=X_estimated_pred_danse_semisupervised,
-            Pk_estimated_pred_test=Pk_estimated_pred_danse_semisupervised,
+            X_estimated_pred_test=X_estimated_pred_danse_semisupervised_plus,
+            Pk_estimated_pred_test=Pk_estimated_pred_danse_semisupervised_plus,
             Cw_test=Cw,
             ssm_model_test=ssm_model_test,
         )
     else:
         (
-            X_estimated_pred_danse_semisupervised,
-            Pk_estimated_pred_danse_semisupervised,
-            X_estimated_filtered_danse_semisupervised,
-            Pk_estimated_filtered_danse_semisupervised,
-            time_elapsed_danse_danse_semisupervised,
+            X_estimated_pred_danse_semisupervised_plus,
+            Pk_estimated_pred_danse_semisupervised_plus,
+            X_estimated_filtered_danse_semisupervised_plus,
+            Pk_estimated_filtered_danse_semisupervised_plus,
+            time_elapsed_danse_danse_semisupervised_plus,
         ) = None, None, None, None, None
         (
-            Y_estimated_pred_danse_semisupervised,
-            Py_estimated_pred_danse_semisupervised,
+            Y_estimated_pred_danse_semisupervised_plus,
+            Py_estimated_pred_danse_semisupervised_plus,
         ) = None, None
     #####################################################################################################################################################################
 
@@ -603,20 +565,15 @@ def test_on_ssm_model(
                 "ukf": metric_fn(X, X_estimated_ukf).numpy().item()
                 if "ukf" in models_list
                 else None,
-                "danse": metric_fn(X, X_estimated_filtered).numpy().item()
-                if "danse" in models_list
+                "pf": metric_fn(X, X_estimated_pf).numpy().item()
+                if "pf" in models_list
                 else None,
-                "danse_supervised": metric_fn(X, X_estimated_filtered_danse_supervised)
-                .numpy()
-                .item()
-                if "danse_supervised" in models_list
-                else None,
-                "danse_semisupervised": metric_fn(
-                    X, X_estimated_filtered_danse_semisupervised
+                "danse_semisupervised_plus": metric_fn(
+                    X, X_estimated_filtered_danse_semisupervised_plus
                 )
                 .numpy()
                 .item()
-                if "danse_semisupervised" in models_list
+                if "danse_semisupervised_plus" in models_list
                 else None,
                 "dmm_st-l": metric_fn(X, X_estimated_filtered_dmm_causal).numpy().item()
                 if "dmm_st-l" in models_list
@@ -630,12 +587,9 @@ def test_on_ssm_model(
         "ls": time_elapsed_ls if "ls" in models_list else None,
         "ekf": time_elapsed_ekf if "ekf" in models_list else None,
         "ukf": time_elapsed_ukf if "ukf" in models_list else None,
-        "danse": time_elapsed_danse if "danse" in models_list else None,
-        "danse_supervised": time_elapsed_danse_supervised
-        if "danse_supervised" in models_list
-        else None,
-        "danse_semisupervised": time_elapsed_danse_danse_semisupervised
-        if "danse_semisupervised" in models_list
+        "pf": time_elapsed_ukf if "pf" in models_list else None,
+        "danse_semisupervised_plus": time_elapsed_danse_danse_semisupervised_plus
+        if "danse_semisupervised_plus" in models_list
         else None,
         "dmm_st-l": time_elapsed_dmm_causal if "dmm_st-l" in models_list else None,
         "kalmannet": time_elapsed_knet if "kalmannet" in models_list else None,
@@ -696,17 +650,6 @@ def test_on_ssm_model(
         savefig=True,
     )
 
-    if "danse" in models_list:
-        plot_3d_state_trajectory(
-            X=torch.squeeze(X_estimated_filtered[0], 0).numpy(),
-            legend="$\\hat{\mathbf{x}}_{DANSE}$",
-            m="k-",
-            savefig_name="./figs/{}/{}/{}_x_danse_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
-            ),
-            savefig=True,
-        )
-
     if "ukf" in models_list:
         plot_3d_state_trajectory(
             X=torch.squeeze(X_estimated_ukf[0], 0).numpy(),
@@ -718,9 +661,22 @@ def test_on_ssm_model(
             savefig=True,
         )
 
-    if "danse_semisupervised" in models_list:
+    if "pf" in models_list:
         plot_3d_state_trajectory(
-            X=torch.squeeze(X_estimated_filtered_danse_semisupervised[0], 0).numpy(),
+            X=torch.squeeze(X_estimated_pf[0], 0).numpy(),
+            legend="$\\hat{\mathbf{x}}_{PF}$",
+            m="k-",
+            savefig_name="./figs/{}/{}/{}_x_pf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+            ),
+            savefig=True,
+        )
+
+    if "danse_semisupervised_plus" in models_list:
+        plot_3d_state_trajectory(
+            X=torch.squeeze(
+                X_estimated_filtered_danse_semisupervised_plus[0], 0
+            ).numpy(),
             legend="$\\hat{\mathbf{x}}_{SemiDANSE}$",
             m="k-",
             savefig_name="./figs/{}/{}/{}_x_semidanse_sigmae2_{}dB_smnr_{}dB.pdf".format(
@@ -748,13 +704,13 @@ def test_on_ssm_model(
         X_est_UKF=torch.squeeze(X_estimated_ukf[0, :, :], 0).numpy()
         if "ukf" in models_list
         else None,
-        X_est_DANSE=torch.squeeze(X_estimated_filtered[0], 0).numpy()
-        if "danse" in models_list
+        X_est_PF=torch.squeeze(X_estimated_pf[0, :, :], 0).numpy()
+        if "pf" in models_list
         else None,
         X_est_SemiDANSE=torch.squeeze(
-            X_estimated_filtered_danse_semisupervised[0], 0
+            X_estimated_filtered_danse_semisupervised_plus[0], 0
         ).numpy()
-        if "danse_semisupervised" in models_list
+        if "danse_semisupervised_plus" in models_list
         else None,
         X_est_DMM=torch.squeeze(X_estimated_filtered_dmm_causal[0], 0).numpy()
         if "dmm_st-l" in models_list
@@ -780,42 +736,39 @@ def test_on_ssm_model(
         )
         if "ukf" in models_list
         else None,
-        X_est_DANSE=torch.squeeze(X_estimated_filtered[0], 0).numpy()
-        if "danse" in models_list
+        X_est_PF=torch.squeeze(X_estimated_pf[0, :, :], 0).numpy()
+        if "pf" in models_list
         else None,
-        X_est_DANSE_std=np.sqrt(
+        X_est_PF_std=np.sqrt(
             torch.diagonal(
-                torch.squeeze(Pk_estimated_filtered[0, :, :, :], 0),
-                offset=0,
-                dim1=1,
-                dim2=2,
+                torch.squeeze(Pk_estimated_pf[0, :, :, :], 0), offset=0, dim1=1, dim2=2
             ).numpy()
         )
-        if "danse" in models_list
+        if "pf" in models_list
         else None,
         X_est_SemiDANSE=torch.squeeze(
-            X_estimated_filtered_danse_semisupervised[0], 0
+            X_estimated_filtered_danse_semisupervised_plus[0], 0
         ).numpy()
-        if "danse_semisupervised" in models_list
+        if "danse_semisupervised_plus" in models_list
         else None,
         X_est_SemiDANSE_std=np.sqrt(
             torch.diagonal(
                 torch.squeeze(
-                    Pk_estimated_filtered_danse_semisupervised[0, :, :, :], 0
+                    Pk_estimated_filtered_danse_semisupervised_plus[0, :, :, :], 0
                 ),
                 offset=0,
                 dim1=1,
                 dim2=2,
             ).numpy()
         )
-        if "danse_semisupervised" in models_list
+        if "danse_semisupervised_plus" in models_list
         else None,
         savefig=True,
         savefig_name="./figs/{}/{}/Axes_w_lims_sigmae2_{}dB_smnr_{}dB.pdf".format(
             dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
         ),
     )
-    '''
+    """
     plot_meas_trajectory_w_lims(
         Y=torch.squeeze(Y[0, :, :], 0).numpy(),
         Y_pred_UKF=torch.squeeze(Y_estimated_ukf_pred[0, :, :], 0).numpy(),
@@ -849,7 +802,7 @@ def test_on_ssm_model(
             dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
         ),
     )
-    '''
+    """
     # plt.show()
     sys.stdout = orig_stdout
     return metrics_dict_for_one_smnr
@@ -858,16 +811,16 @@ def test_on_ssm_model(
 if __name__ == "__main__":
     # Testing parameters
     ssm_name = "Nonlinear1D"
-    h_fn_type = "scaledcubic"
+    h_fn_type = "relu"
     m = 1
     n = 1
-    T_train = 100
+    T_train = 200
     N_train = 1000
     T_test = 2000
     N_test = 100
     sigma_e2_dB_test = -10.0
     device = "cpu"
-    nsup = 20
+    nsup = 1000
     bias = None  # By default should be positive, equal to 10.0
     p = None  # Keep this fixed at zero for now, equal to 0.0
     mode = "full"
@@ -881,17 +834,18 @@ if __name__ == "__main__":
                 nsup, N_train, T_train
             )
         )
-    h_fn_type = "cubic"
     ssmtype = (
-        "{}SSMn{}_{}".format(ssm_name, n, h_fn_type) if n < m else "{}SSM_{}".format(ssm_name, h_fn_type)
+        "{}SSMn{}_{}".format(ssm_name, n, h_fn_type)
+        if n < m
+        else "{}SSM_{}".format(ssm_name, h_fn_type)
     )  # Hardcoded for {}SSMrn{} (random H low rank), {}SSMn{} (deterministic H low rank),
     dirname = "{}SSMn{}x{}_{}".format(ssm_name, m, n, h_fn_type)
     os.makedirs("./figs/{}/{}".format(dirname, evaluation_mode), exist_ok=True)
 
-    smnr_dB_arr = np.array([0.0, 10.0, 20.0, 30.0])
+    smnr_dB_arr = np.array([10.0])
     smnr_dB_dict_arr = ["{}dB".format(smnr_dB) for smnr_dB in smnr_dB_arr]
 
-    list_of_models_comparison = ["ls", "ekf", "ukf"]
+    list_of_models_comparison = ["ls", "ekf", "ukf", "pf"]
     list_of_display_fmts = ["gp-.", "rd--", "ks--", "bo-", "mo-", "ys-", "co-"]
     list_of_metrics = ["nmse", "nmse_std", "mse_dB", "mse_dB_std", "time_elapsed"]
 
@@ -910,7 +864,8 @@ if __name__ == "__main__":
         # "kalmannet":dict.fromkeys(smnr_dB_dict_arr, {}),
         # "dmm_st-l":dict.fromkeys(smnr_dB_dict_arr, {}),
         # "danse_supervised":dict.fromkeys(smnr_dB_dict_arr, {}),
-        # "danse_semisupervised": dict.fromkeys(smnr_dB_dict_arr, {}),
+        # "danse_semisupervised_plus": dict.fromkeys(smnr_dB_dict_arr, {}),
+        "danse_semisupervised_plus": dict.fromkeys(smnr_dB_dict_arr, {}),
     }
 
     test_data_file_dict = {}
@@ -935,11 +890,11 @@ if __name__ == "__main__":
                 else N_train
             )
 
-            if saved_model == "danse_semisupervised" and nsup is not None:
+            if saved_model == "danse_semisupervised_plus" and nsup is not None:
                 model_file_saved_dict[key][smnr_dB_label] = glob.glob(
                     "./models/*{}_{}_*nsup_{}_m_{}_n_{}_*T_{}_N_{}*sigmae2_{}dB_smnr_{}dB*/*best*".format(
                         ssmtype,
-                        saved_model,
+                        "danse_semisupervised",
                         nsup,
                         m,
                         n,
@@ -949,6 +904,7 @@ if __name__ == "__main__":
                         smnr_dB_arr[j],
                     )
                 )[-1]
+
             elif saved_model == "KNetUoffline":
                 model_file_saved_dict[key][smnr_dB_label] = glob.glob(
                     "./models/*{}_{}_*m_{}_*n_{}_*T_{}_N_{}*sigmae2_{}dB_smnr_{}dB*/*best*".format(
@@ -1022,28 +978,70 @@ if __name__ == "__main__":
     ]
 
     for idx_display_metric in range(len(display_metrics)):
-
         if list_of_metrics[idx_display_metric] != "time_elapsed":
             plt.figure()
             for j, model_name in enumerate(list_of_models_comparison):
-                plt.errorbar(smnr_dB_arr, metrics_multidim_mat[idx_display_metric, j, :], fmt=list_of_display_fmts[j], yerr=metrics_multidim_mat[idx_display_metric+1, j, :],  linewidth=1.5, label="{}".format(model_name.upper()))
-            plt.xlabel('SMNR (in dB)')
-            plt.ylabel('{} (in dB)'.format(list_of_metrics[idx_display_metric].upper()))
+                plt.errorbar(
+                    smnr_dB_arr,
+                    metrics_multidim_mat[idx_display_metric, j, :],
+                    fmt=list_of_display_fmts[j],
+                    yerr=metrics_multidim_mat[idx_display_metric + 1, j, :],
+                    linewidth=1.5,
+                    label="{}".format(model_name.upper()),
+                )
+            plt.xlabel("SMNR (in dB)")
+            plt.ylabel("{} (in dB)".format(list_of_metrics[idx_display_metric].upper()))
             plt.grid(True)
             plt.legend()
             plt.tight_layout()
-            #plt.subplot(212)
-            tikzplotlib.save('./figs/{}/{}/{}_vs_SMNR_{}.tex'.format(dirname, evaluation_mode, list_of_metrics[idx_display_metric].upper(), ssm_name))
-            plt.savefig('./figs/{}/{}/{}_vs_SMNR_{}.pdf'.format(dirname, evaluation_mode, list_of_metrics[idx_display_metric].upper(), ssm_name))
+            # plt.subplot(212)
+            tikzplotlib.save(
+                "./figs/{}/{}/{}_vs_SMNR_{}.tex".format(
+                    dirname,
+                    evaluation_mode,
+                    list_of_metrics[idx_display_metric].upper(),
+                    ssm_name,
+                )
+            )
+            plt.savefig(
+                "./figs/{}/{}/{}_vs_SMNR_{}.pdf".format(
+                    dirname,
+                    evaluation_mode,
+                    list_of_metrics[idx_display_metric].upper(),
+                    ssm_name,
+                )
+            )
         else:
             plt.figure()
             for j, model_name in enumerate(list_of_models_comparison):
-                plt.plot(smnr_dB_arr, metrics_multidim_mat[idx_display_metric, j, :], list_of_display_fmts[j], linewidth=1.5, label="{}".format(model_name.upper()))
-            plt.xlabel('SMNR (in dB)')
-            plt.ylabel('{} (in secs)'.format(list_of_metrics[idx_display_metric].upper()))
+                plt.plot(
+                    smnr_dB_arr,
+                    metrics_multidim_mat[idx_display_metric, j, :],
+                    list_of_display_fmts[j],
+                    linewidth=1.5,
+                    label="{}".format(model_name.upper()),
+                )
+            plt.xlabel("SMNR (in dB)")
+            plt.ylabel(
+                "{} (in secs)".format(list_of_metrics[idx_display_metric].upper())
+            )
             plt.grid(True)
             plt.legend()
             plt.tight_layout()
-            #plt.subplot(212)
-            tikzplotlib.save('./figs/{}/{}/{}_vs_SMNR_{}.tex'.format(dirname, evaluation_mode, list_of_metrics[idx_display_metric].upper(), ssm_name))
-            plt.savefig('./figs/{}/{}/{}_vs_SMNR_{}.pdf'.format(dirname, evaluation_mode, list_of_metrics[idx_display_metric].upper(), ssm_name))
+            # plt.subplot(212)
+            tikzplotlib.save(
+                "./figs/{}/{}/{}_vs_SMNR_{}.tex".format(
+                    dirname,
+                    evaluation_mode,
+                    list_of_metrics[idx_display_metric].upper(),
+                    ssm_name,
+                )
+            )
+            plt.savefig(
+                "./figs/{}/{}/{}_vs_SMNR_{}.pdf".format(
+                    dirname,
+                    evaluation_mode,
+                    list_of_metrics[idx_display_metric].upper(),
+                    ssm_name,
+                )
+            )
