@@ -16,11 +16,11 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         self,
         n_states,
         n_obs,
-        f=None,
-        h=None,
+        f,
+        h,
         Q=None,
         R=None,
-        n_particles=100,
+        n_particles=10,
         device="cpu",
     ):
         # Initialize the device
@@ -29,8 +29,8 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         # Initializing the system model
         self.n_states = n_states  # Setting the number of states of the particle filter
         self.n_obs = n_obs
-        self.f = f  # State transition function (relates x_k, u_k to x_{k+1})
-        self.h = h  # Output function (relates state x_k to output y_k)
+        self.f_k = f  # State transition function (relates x_k, u_k to x_{k+1})
+        self.g_k = h  # Output function (relates state x_k to output y_k)
 
         self.n_particles = n_particles
         self.Q_k = self.push_to_device(
@@ -39,22 +39,20 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         self.R_k = self.push_to_device(
             R
         )  # Covariance matrix of the measurement noise, we assume mesaurement noise v_k ~ N(0, R)
-
         self.initialize()
-        self.g = lambda x: torch.squeeze(self.h(x))
 
     def calc_f(self, particles, u, t):
         N_p = particles.shape[0]
-        particles_f = np.empty((N_p, self.n))
+        particles_f = np.empty((N_p, self.n_obs))
         for k in range(N_p):
-            particles_f[k, :] = self.f(torch.tensor(particles[k, :]))
+            particles_f[k, :] = self.f_k(torch.from_numpy(particles[k, :]).type(torch.FloatTensor).to(self.device)).numpy()
         return particles_f
 
     def calc_g(self, particles, t):
         N_p = particles.shape[0]
-        particles_g = np.empty((N_p, self.m))
+        particles_g = np.empty((N_p, self.n_states))
         for k in range(N_p):
-            particles_g[k, :] = self.g(torch.tensor(particles[k, :]))
+            particles_g[k, :] = self.g_k(torch.from_numpy(particles[k, :]).type(torch.FloatTensor).to(self.device)).numpy()
         return particles_g
 
     def push_to_device(self, x):
@@ -92,10 +90,14 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
 
         start = timer()
         for i in range(0, N):
-            self.initialize(R_k=Cw[i])
+            self.initialize(R_k=Cw[i].numpy())
             y_in = Y[i, :, :].numpy().squeeze()
-            simulator_ = simulator.Simulator(self, u=None, y=y_in)
-            simulator_.simulate(self.n_particles, 0, filter="PF", meas_first=True)
+            if U is not None:
+                u_in = U[i, :, :].numpy().squeeze()
+                simulator_ = simulator.Simulator(self, u=u_in, y=y_in)
+            else:
+                simulator_ = simulator.Simulator(self, u=None, y=y_in)
+            simulator_.simulate(num_part=self.n_particles, num_traj=0, filter="pf", meas_first=True)
             traj_estimated[i, :, :] = torch.from_numpy(
                 simulator_.get_filtered_mean()
             ).type(torch.FloatTensor)
@@ -105,7 +107,7 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
             filtered_particles_estimated = (
                 torch.from_numpy(filtered_particles_estimated)
                 .type(torch.FloatTensor)
-                .transpose(1, 0, 2)
+                .transpose(1, 0)
             )
             filtered_weights = (
                 torch.from_numpy(filtered_weights)
@@ -146,4 +148,4 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         # Print Run Time
         print("Inference Time:", t)
 
-        return traj_estimated, Pk_estimated, MSE_PF_linear_arr.mean(), mse_pf_dB_avg
+        return traj_estimated, Pk_estimated, mse_pf_dB_avg

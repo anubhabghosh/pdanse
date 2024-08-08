@@ -117,7 +117,7 @@ class UKF_Aliter(nn.Module):
 
         start = timer()
         for i in range(0, N):
-            self.ukf.R = Cw[i]
+            self.ukf.R = Cw[i].numpy()
             self.initialize()
             #if self.init_cond is not None:
             #    self.ukf.x = torch.unsqueeze(self.init_cond[i, :], 1).numpy()

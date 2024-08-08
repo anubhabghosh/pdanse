@@ -152,6 +152,8 @@ def test_danse_semisupervised_plus_ssm(Y_test, ssm_model_test, h_fn_type, model_
         n_obs=ssm_model_test.n_obs,
         mu_w=ssm_model_test.mu_w,
         C_w=ssm_model_test.Cw,
+        n_MC=est_dict['danse_semisupervised_plus']['n_MC'],
+        H=np.eye(ssm_model_test.n_obs, ssm_model_test.n_states),
         batch_size=1,
         h_fn_type=h_fn_type,
         mu_x0=np.zeros((ssm_model_test.n_states,)),

@@ -103,7 +103,7 @@ class EKF(nn.Module):
             _type_: _description_
         """
         
-        self.R_k = self.push_to_device(R_k)
+        self.R_k = R_k
         self.H_k = self.compute_jac_h_k(x_=self.x_hat_neg_k).to(self.device)
         assert self.H_k.shape[1] == self.n_states, "Dimension of H_k is not consistent"
 

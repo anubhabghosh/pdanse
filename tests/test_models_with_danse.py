@@ -140,8 +140,8 @@ def test_on_ssm_model(
         learnable_model_files["dmm_st-l"] if "dmm_st-l" in models_list else None
     )
 
-    ssm_type, h_fn_type, rnn_type, m, n, T, _, sigma_e2_dB, smnr_dB = parse(
-        "{}_danse_semisupervised_opt_{}_m_{:d}_n_{:d}_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB",
+    ssm_type, h_fn_type, rnn_type, nsup, m, n, T, _, sigma_e2_dB, smnr_dB = parse(
+        "{}_{}_danse_semisupervised_opt_{}_nsup_{}_m_{:d}_n_{:d}_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB",
         model_file_saved_danse_semisupervised_plus.split("/")[-2],
     )
 
@@ -165,7 +165,7 @@ def test_on_ssm_model(
         (
             m,
             n,
-            ssm_name_test,
+            ssm_type_test,
             h_fn_type_test,
             T_test,
             N_test,
@@ -183,10 +183,10 @@ def test_on_ssm_model(
         ssm_dict, _ = get_parameters(
             n_states=m, n_obs=n, measurment_fn_type=h_fn_type_test, device="cpu"
         )
-        ssm_model_test_dict = ssm_dict[ssm_name_test]
-        f_fn, f_ukf_fn = get_f_function(ssm_name_test)
+        ssm_model_test_dict = ssm_dict[ssm_type_test]
+        f_fn, f_ukf_fn = get_f_function(ssm_type_test)
 
-        if "LorenzSSM" in ssm_type:
+        if "LorenzSSM" in ssm_type_test:
             delta = DELTA_T_LORENZ63  # If decimate is True, then set this delta to 1e-5 and run it for long time
             delta_d = DELTA_T_LORENZ63 / DECIMATION_FACTOR_LORENZ63
             ssm_model_test = LorenzSSM(
@@ -198,14 +198,15 @@ def test_on_ssm_model(
                 decimate=decimate,
                 measurement_fn_type=h_fn_type_test,
                 alpha=0.0,
-                H=get_H_DANSE(type_=ssm_type, n_states=m, n_obs=n),
+                H=get_H_DANSE(type_=ssm_type_test, n_states=m, n_obs=n),
                 mu_e=np.zeros((m,)),
                 mu_w=np.zeros((n,)),
                 use_Taylor=use_Taylor,
             )
+            U_test = torch.empty((N_test, m)).type(torch.FloatTensor)
             decimation_factor = DECIMATION_FACTOR_LORENZ63
 
-        elif "ChenSSM" in ssm_type:
+        elif "ChenSSM" in ssm_type_test:
             delta = DELTA_T_CHEN  # If decimate is True, then set this delta to 1e-5 and run it for long time
             delta_d = DELTA_T_CHEN / DECIMATION_FACTOR_CHEN
             ssm_model_test = LorenzSSM(
@@ -217,14 +218,15 @@ def test_on_ssm_model(
                 decimate=decimate,
                 measurement_fn_type=h_fn_type_test,
                 alpha=1.0,
-                H=get_H_DANSE(type_=ssm_type, n_states=m, n_obs=n),
+                H=get_H_DANSE(type_=ssm_type_test, n_states=m, n_obs=n),
                 mu_e=np.zeros((m,)),
                 mu_w=np.zeros((n,)),
                 use_Taylor=use_Taylor,
             )
+            U_test = torch.empty((N_test, m)).type(torch.FloatTensor)
             decimation_factor = DECIMATION_FACTOR_CHEN
 
-        elif "RosslerSSM" in ssm_type:
+        elif "RosslerSSM" in ssm_type_test:
             delta = DELTA_T_ROSSLER  # If decimate is True, then set this delta to 1e-5 and run it for long time
             delta_d = DELTA_T_ROSSLER / DECIMATION_FACTOR_ROSSLER
             ssm_model_test = RosslerSSM(
@@ -235,7 +237,7 @@ def test_on_ssm_model(
                 delta_d=delta_d,
                 a=ssm_model_test_dict["a"],
                 b=ssm_model_test_dict["b"],
-                H=get_H_DANSE(type_=ssm_type, n_states=m, n_obs=n),
+                H=get_H_DANSE(type_=ssm_type_test, n_states=m, n_obs=n),
                 c=ssm_model_test_dict["c"],
                 measurement_fn_type=h_fn_type_test,
                 decimate=decimate,
@@ -243,9 +245,10 @@ def test_on_ssm_model(
                 mu_w=np.zeros((n,)),
                 use_Taylor=use_Taylor,
             )
+            U_test = torch.empty((N_test, m)).type(torch.FloatTensor)
             decimation_factor = DECIMATION_FACTOR_ROSSLER
 
-        elif "Nonlinear1DSSM" in ssm_type:
+        elif "Nonlinear1DSSM" in ssm_type_test:
             ssm_model_test = Nonlinear1DSSM(
                 n_states=m,
                 n_obs=n,
@@ -257,7 +260,8 @@ def test_on_ssm_model(
                 mu_e=ssm_model_test_dict["mu_e"],
                 mu_w=ssm_model_test_dict["mu_w"],
             )
-            decimation_factor = DECIMATION_FACTOR_ROSSLER
+            ssm_model_test.delta = 1.0
+            decimation_factor = 1
             u_test = torch.Tensor(
                 [ssm_model_test.generate_driving_noise(k) for k in range(T_test)]
             ).type(torch.FloatTensor)
@@ -276,7 +280,7 @@ def test_on_ssm_model(
                 sigma_e2_dB=sigma_e2_dB_test,
                 smnr_dB=smnr_dB_test,
             )
-            if np.isnan(x_ssm_i).any() is False:
+            if not np.isnan(x_ssm_i).any():
                 X[idx_test, :, :] = torch.from_numpy(x_ssm_i).type(torch.FloatTensor)
                 Y[idx_test, :, :] = torch.from_numpy(y_ssm_i).type(torch.FloatTensor)
                 Cw[idx_test, :, :] = torch.from_numpy(cw_ssm_i).type(torch.FloatTensor)
@@ -286,21 +290,23 @@ def test_on_ssm_model(
         test_data_dict["X"] = X
         test_data_dict["Y"] = Y
         test_data_dict["Cw"] = Cw
+        test_data_dict["U"] = U_test
         test_data_dict["model"] = ssm_model_test
         save_dataset(Z_XY=test_data_dict, filename=test_data_file)
 
     else:
         print("Dataset at {} already present!".format(test_data_file))
-        m, n, ssm_type_test, T_test, N_test, sigma_e2_dB_test, smnr_dB_test = parse(
-            "test_trajectories_m_{:d}_n_{:d}_{}_data_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB.pkl",
+        m, n, ssm_type_test, h_fn_type_test, T_test, N_test, sigma_e2_dB_test, smnr_dB_test = parse(
+            "test_trajectories_m_{:d}_n_{:d}_{}_{}_data_T_{:d}_N_{:d}_sigmae2_{:f}dB_SMNR_{:f}dB.pkl",
             test_data_file.split("/")[-1],
         )
         test_data_dict = load_saved_dataset(filename=test_data_file)
         X = test_data_dict["X"]
         Y = test_data_dict["Y"]
         Cw = test_data_dict["Cw"]
+        U_test = test_data_dict["U"]
         ssm_model_test = test_data_dict["model"]
-        f_fn, f_ukf_fn = get_f_function(ssm_type)
+        f_fn, f_ukf_fn = get_f_function(ssm_type_test)
 
     assert (
         h_fn_type == h_fn_type_test
@@ -405,7 +411,6 @@ def test_on_ssm_model(
             h_fn=get_measurement_fn(fn_name=h_fn_type_test),
             Cw_test=Cw,
             device=device,
-            use_Taylor=use_Taylor,
             U_test=U_test if "Nonlinear1DSSM" in ssm_type else None,
         )
         X_estimated_dict["pf"]["est"] = X_estimated_pf
@@ -467,7 +472,7 @@ def test_on_ssm_model(
             Y_test=Y,
             ssm_model_test=ssm_model_test,
             h_fn_type=h_fn_type_test,
-            model_file_saved_danse_semisupervised=model_file_saved_danse_semisupervised_plus,
+            model_file_saved_danse_semisupervised_plus=model_file_saved_danse_semisupervised_plus,
             Cw_test=Cw,
             rnn_type=rnn_type,
             device=device,
@@ -478,6 +483,7 @@ def test_on_ssm_model(
         X_estimated_dict["danse_semisupervised_plus"]["est_cov"] = (
             Pk_estimated_filtered_danse_semisupervised_plus
         )
+        """
         (
             Y_estimated_pred_danse_semisupervised_plus,
             Py_estimated_pred_danse_semisupervised_plus,
@@ -487,6 +493,11 @@ def test_on_ssm_model(
             Cw_test=Cw,
             ssm_model_test=ssm_model_test,
         )
+        """
+        (
+            Y_estimated_pred_danse_semisupervised_plus,
+            Py_estimated_pred_danse_semisupervised_plus,
+        ) = None, None
     else:
         (
             X_estimated_pred_danse_semisupervised_plus,
@@ -587,7 +598,7 @@ def test_on_ssm_model(
         "ls": time_elapsed_ls if "ls" in models_list else None,
         "ekf": time_elapsed_ekf if "ekf" in models_list else None,
         "ukf": time_elapsed_ukf if "ukf" in models_list else None,
-        "pf": time_elapsed_ukf if "pf" in models_list else None,
+        "pf": time_elapsed_pf if "pf" in models_list else None,
         "danse_semisupervised_plus": time_elapsed_danse_danse_semisupervised_plus
         if "danse_semisupervised_plus" in models_list
         else None,
@@ -677,9 +688,9 @@ def test_on_ssm_model(
             X=torch.squeeze(
                 X_estimated_filtered_danse_semisupervised_plus[0], 0
             ).numpy(),
-            legend="$\\hat{\mathbf{x}}_{SemiDANSE}$",
+            legend="$\\hat{\mathbf{x}}_{SemiDANSE+}$",
             m="k-",
-            savefig_name="./figs/{}/{}/{}_x_semidanse_sigmae2_{}dB_smnr_{}dB.pdf".format(
+            savefig_name="./figs/{}/{}/{}_x_semidanse_plus_sigmae2_{}dB_smnr_{}dB.pdf".format(
                 dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
             ),
             savefig=True,
@@ -696,6 +707,7 @@ def test_on_ssm_model(
             savefig=True,
         )
 
+    '''
     plot_state_trajectory_axes_all(
         X=torch.squeeze(X[0, :, :], 0).numpy(),
         X_est_EKF=torch.squeeze(X_estimated_ekf[0, :, :], 0).numpy()
@@ -768,6 +780,7 @@ def test_on_ssm_model(
             dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
         ),
     )
+    '''
     """
     plot_meas_trajectory_w_lims(
         Y=torch.squeeze(Y[0, :, :], 0).numpy(),
@@ -818,7 +831,7 @@ if __name__ == "__main__":
     N_train = 1000
     T_test = 2000
     N_test = 100
-    sigma_e2_dB_test = -10.0
+    sigma_e2_dB_test = 10.0
     device = "cpu"
     nsup = 1000
     bias = None  # By default should be positive, equal to 10.0
@@ -845,7 +858,7 @@ if __name__ == "__main__":
     smnr_dB_arr = np.array([10.0])
     smnr_dB_dict_arr = ["{}dB".format(smnr_dB) for smnr_dB in smnr_dB_arr]
 
-    list_of_models_comparison = ["ls", "ekf", "ukf", "pf"]
+    list_of_models_comparison = ["ls", "ekf", "pf", "danse_semisupervised_plus"]
     list_of_display_fmts = ["gp-.", "rd--", "ks--", "bo-", "mo-", "ys-", "co-"]
     list_of_metrics = ["nmse", "nmse_std", "mse_dB", "mse_dB_std", "time_elapsed"]
 
