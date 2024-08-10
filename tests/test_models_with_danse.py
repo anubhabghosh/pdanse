@@ -147,6 +147,7 @@ def test_on_ssm_model(
 
     J = 5
     J_test = J_TEST
+    n_particles = 300
     # smnr_dB = 20
     decimate = True
     use_Taylor = False
@@ -324,11 +325,11 @@ def test_on_ssm_model(
     ###########################################################################################################
     # NOTE: The following couple lines of code are only for rapid testing for debugging of code,
     # We take the first two samples from the testing dataset and pass them on to the prediction techniques
-    idx = np.random.choice(X.shape[0], 2, replace=False)
-    print(idx, file=orig_stdout)
-    Y = Y[idx]
-    X = X[idx]
-    Cw = Cw[idx]
+    #idx = np.random.choice(X.shape[0], 2, replace=False)
+    #print(idx, file=orig_stdout)
+    #Y = Y[idx]
+    #X = X[idx]
+    #Cw = Cw[idx]
     ###########################################################################################################
 
     # Collecting all estimator results
@@ -408,6 +409,7 @@ def test_on_ssm_model(
             Y_test=Y,
             ssm_model_test=ssm_model_test,
             f_fn=f_fn,
+            n_particles=n_particles,
             h_fn=get_measurement_fn(fn_name=h_fn_type_test),
             Cw_test=Cw,
             device=device,
@@ -641,73 +643,74 @@ def test_on_ssm_model(
 
     #####################################################################################################################################################################
     # Plot the result
-    plot_3d_state_trajectory(
-        X=torch.squeeze(X[0, :, :], 0).numpy(),
-        legend="$\\mathbf{x}^{true}$",
-        m="b-",
-        savefig_name="./figs/{}/{}/{}_x_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
-            dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
-        ),
-        savefig=True,
-    )
-
-    plot_3d_measurement_trajectory(
-        Y=torch.squeeze(Y[0, :, :], 0).numpy(),
-        legend="$\\mathbf{y}^{true}$",
-        m="r-",
-        savefig_name="./figs/{}/{}/{}_y_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
-            dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
-        ),
-        savefig=True,
-    )
-
-    if "ukf" in models_list:
+    if m >= 2:
         plot_3d_state_trajectory(
-            X=torch.squeeze(X_estimated_ukf[0], 0).numpy(),
-            legend="$\\hat{\mathbf{x}}_{UKF}$",
-            m="k-",
-            savefig_name="./figs/{}/{}/{}_x_ukf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+            X=torch.squeeze(X[0, :, :], 0).numpy(),
+            legend="$\\mathbf{x}^{true}$",
+            m="b-",
+            savefig_name="./figs/{}/{}/{}_x_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
                 dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
             ),
             savefig=True,
         )
 
-    if "pf" in models_list:
-        plot_3d_state_trajectory(
-            X=torch.squeeze(X_estimated_pf[0], 0).numpy(),
-            legend="$\\hat{\mathbf{x}}_{PF}$",
-            m="k-",
-            savefig_name="./figs/{}/{}/{}_x_pf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+        plot_3d_measurement_trajectory(
+            Y=torch.squeeze(Y[0, :, :], 0).numpy(),
+            legend="$\\mathbf{y}^{true}$",
+            m="r-",
+            savefig_name="./figs/{}/{}/{}_y_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
                 dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
             ),
             savefig=True,
         )
 
-    if "danse_semisupervised_plus" in models_list:
-        plot_3d_state_trajectory(
-            X=torch.squeeze(
-                X_estimated_filtered_danse_semisupervised_plus[0], 0
-            ).numpy(),
-            legend="$\\hat{\mathbf{x}}_{SemiDANSE+}$",
-            m="k-",
-            savefig_name="./figs/{}/{}/{}_x_semidanse_plus_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
-            ),
-            savefig=True,
-        )
+        if "ukf" in models_list:
+            plot_3d_state_trajectory(
+                X=torch.squeeze(X_estimated_ukf[0], 0).numpy(),
+                legend="$\\hat{\mathbf{x}}_{UKF}$",
+                m="k-",
+                savefig_name="./figs/{}/{}/{}_x_ukf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                ),
+                savefig=True,
+            )
 
-    if "dmm_st-l" in models_list:
-        plot_3d_state_trajectory(
-            X=torch.squeeze(X_estimated_filtered_dmm_causal[0], 0).numpy(),
-            legend="$\\hat{\mathbf{x}}_{DMM}$",
-            m="k-",
-            savefig_name="./figs/{}/{}/{}_x_dmm_causal_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
-            ),
-            savefig=True,
-        )
+        if "pf" in models_list:
+            plot_3d_state_trajectory(
+                X=torch.squeeze(X_estimated_pf[0], 0).numpy(),
+                legend="$\\hat{\mathbf{x}}_{PF}$",
+                m="k-",
+                savefig_name="./figs/{}/{}/{}_x_pf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                ),
+                savefig=True,
+            )
 
-    '''
+        if "danse_semisupervised_plus" in models_list:
+            plot_3d_state_trajectory(
+                X=torch.squeeze(
+                    X_estimated_filtered_danse_semisupervised_plus[0], 0
+                ).numpy(),
+                legend="$\\hat{\mathbf{x}}_{SemiDANSE+}$",
+                m="k-",
+                savefig_name="./figs/{}/{}/{}_x_semidanse_plus_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                ),
+                savefig=True,
+            )
+
+        if "dmm_st-l" in models_list:
+            plot_3d_state_trajectory(
+                X=torch.squeeze(X_estimated_filtered_dmm_causal[0], 0).numpy(),
+                legend="$\\hat{\mathbf{x}}_{DMM}$",
+                m="k-",
+                savefig_name="./figs/{}/{}/{}_x_dmm_causal_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                ),
+                savefig=True,
+            )
+
+    
     plot_state_trajectory_axes_all(
         X=torch.squeeze(X[0, :, :], 0).numpy(),
         X_est_EKF=torch.squeeze(X_estimated_ekf[0, :, :], 0).numpy()
@@ -780,7 +783,7 @@ def test_on_ssm_model(
             dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
         ),
     )
-    '''
+    
     """
     plot_meas_trajectory_w_lims(
         Y=torch.squeeze(Y[0, :, :], 0).numpy(),
@@ -833,7 +836,7 @@ if __name__ == "__main__":
     N_test = 100
     sigma_e2_dB_test = 10.0
     device = "cpu"
-    nsup = 1000
+    nsup = 50
     bias = None  # By default should be positive, equal to 10.0
     p = None  # Keep this fixed at zero for now, equal to 0.0
     mode = "full"
@@ -843,7 +846,7 @@ if __name__ == "__main__":
         bias = None
         p = None
         evaluation_mode = (
-            "ModTest_diff_smnr_nsup_{}_Ntrain_{}_Ttrain_{}_refactored".format(
+            "ModTest_diff_smnr_nsup_{}_Ntrain_{}_Ttrain_{}_refactored_npart300".format(
                 nsup, N_train, T_train
             )
         )
@@ -855,7 +858,7 @@ if __name__ == "__main__":
     dirname = "{}SSMn{}x{}_{}".format(ssm_name, m, n, h_fn_type)
     os.makedirs("./figs/{}/{}".format(dirname, evaluation_mode), exist_ok=True)
 
-    smnr_dB_arr = np.array([10.0])
+    smnr_dB_arr = np.array([10.0, 30.0])
     smnr_dB_dict_arr = ["{}dB".format(smnr_dB) for smnr_dB in smnr_dB_arr]
 
     list_of_models_comparison = ["ls", "ekf", "pf", "danse_semisupervised_plus"]

@@ -64,11 +64,22 @@ def abs_hfn(x):
     elif type(x).__module__ == torch.__name__:
         return torch.abs(x)
 
-def dist_sq_hfn(x):
+def cart2sph3dmod_hfn(x):
     if type(x).__module__ == np.__name__:
-        return np.sum(np.square(x)).reshape((-1,))
+        hx = np.zeros_like(x)
+        hx[0] = np.sqrt(np.sum(np.square(x)))
+        hx[1] = np.arctan2(x[1], x[0]+1e-10) #np.sign(x[1]) * np.arccos(x[0] / np.sqrt(np.sum(np.square(x)[:2]))) 
+        hx[2] = x[2] #np.arccos(x[2] / (np.sqrt(np.sum(np.square(x)))))
+        assert not np.isnan(hx).any(), "NaNs in measurement function, x={}, hx={}".format(x, hx)
+
     elif type(x).__module__ == torch.__name__:
-        return torch.sum(torch.square(x)).reshape((-1,))
+        hx = torch.zeros_like(x)
+        hx[...,0] = torch.sqrt(torch.sum(torch.square(x), -1))
+        hx[...,1] = torch.atan2(x[...,1], x[...,0]+1e-10) # torch.sign(x[...,1]) * torch.acos(torch.div(x[...,0], torch.sqrt(torch.sum(torch.square(x)[...,:2]))))
+        hx[...,2] = x[...,2] #torch.acos(torch.div(x[...,2], torch.sqrt(torch.sum(torch.square(x), -1))))
+        assert not torch.isnan(hx).any(), "NaNs in measurement function, x={}, hx={}".format(x, hx)
+
+    return hx
 
 def get_measurement_fn(fn_name):
 
@@ -81,7 +92,7 @@ def get_measurement_fn(fn_name):
         "cubic": cubic_hfn,
         "poly": poly_hfn,
         "abs": abs_hfn,
-        "distsq": dist_sq_hfn,
+        "cart2sph3dmod": cart2sph3dmod_hfn,
         "splice32": splice32_hfn,
         "splice31": splice31_hfn,
         "sigmoid":sigmoid_hfn

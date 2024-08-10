@@ -14,6 +14,8 @@ import torch
 # from utils.plot_functions import plot_state_trajectory, plot_state_trajectory_axes
 from torch import nn, optim
 from torch.autograd import Variable
+import torch.autograd
+import torch.utils
 
 from bin.measurement_fns import get_measurement_fn
 from src.rnn import RNN_model
@@ -241,7 +243,10 @@ class SemiDANSEplus(nn.Module):
     ):
         # Compute the unsupervised loss
         if use_unsup_loss:
+            assert not torch.isnan(Yi_batch_unsup).any(), "NaNs in unsup input"
             mu_batch_unsup, vars_batch_unsup = self.rnn.forward(x=Yi_batch_unsup)
+            assert not torch.isnan(mu_batch_unsup).any(), "NaNs in unsup mean"
+            assert not torch.isnan(vars_batch_unsup).any(), "NaNs in unsup variances"
             mu_xt_yt_prev_unsup, L_xt_yt_prev_unsup = self.compute_prior_mean_vars(
                 mu_xt_yt_prev=mu_batch_unsup, L_xt_yt_prev=vars_batch_unsup
             )
@@ -266,10 +271,13 @@ class SemiDANSEplus(nn.Module):
 
             if use_sup_loss:
                 # Compute the supervised loss
+                assert not torch.isnan(Yi_batch_sup).any(), "NaNs in sup input"
                 mu_batch_sup, vars_batch_sup = self.rnn.forward(x=Yi_batch_sup)
                 mu_xt_yt_prev_sup, L_xt_yt_prev_sup = self.compute_prior_mean_vars(
                     mu_xt_yt_prev=mu_batch_sup, L_xt_yt_prev=vars_batch_sup
                 )
+                assert not torch.isnan(mu_batch_sup).any(), "NaNs in sup mean"
+                assert not torch.isnan(vars_batch_sup).any(), "NaNs in sup variances"
 
                 loss_batch_sup = self.compute_logpdf_Gaussian(
                     input_=Xi_batch_sup, mean=mu_xt_yt_prev_sup, cov=L_xt_yt_prev_sup
@@ -291,11 +299,13 @@ class SemiDANSEplus(nn.Module):
         else:
             if use_sup_loss:
                 # Compute the supervised loss
+                assert not torch.isnan(Yi_batch_sup).any(), "NaNs in sup input"
                 mu_batch_sup, vars_batch_sup = self.rnn.forward(x=Yi_batch_sup)
                 mu_xt_yt_prev_sup, L_xt_yt_prev_sup = self.compute_prior_mean_vars(
                     mu_xt_yt_prev=mu_batch_sup, L_xt_yt_prev=vars_batch_sup
                 )
-
+                assert not torch.isnan(mu_batch_sup).any(), "NaNs in sup mean"
+                assert not torch.isnan(vars_batch_sup).any(), "NaNs in sup variances"
                 loss_batch_sup = self.compute_logpdf_Gaussian(
                     input_=Xi_batch_sup, mean=mu_xt_yt_prev_sup, cov=L_xt_yt_prev_sup
                 ) + self.compute_logpdf_Gaussian(
@@ -415,6 +425,7 @@ def train_danse_semisupervised_plus(
 
     # Start time
     starttime = timer()
+    #with torch.autograd.detect_anomaly():
     try:
         for epoch in range(nepochs):
             tr_running_loss = 0.0
@@ -551,16 +562,21 @@ def train_danse_semisupervised_plus(
                 log_pXY_train_batch_avg.backward()
                 optimizer.step()
 
+                #param_weight_grad_norm = 0.0
+                #for param in model.parameters():
+                #    param_weight_grad_norm += torch.norm(param.grad, p='fro')
                 # print statistics
                 tr_running_loss += log_pXY_train_batch_avg.item()
                 tr_loss_epoch_sum += log_pXY_train_batch_avg.item()
 
-                if i % 100 == 99 and (
-                    (epoch + 1) % 100 == 0
-                ):  # print every 10 mini-batches
+                #if (epoch + 1) % 1 == 0:
+                    # print every 10 mini-batches
                     # print("Epoch: {}/{}, Batch index: {}, Training loss: {}".format(epoch+1, nepochs, i+1, tr_running_loss / 100))
                     # print("Epoch: {}/{}, Batch index: {}, Training loss: {}".format(epoch+1, nepochs, i+1, tr_running_loss / 100), file=orig_stdout)
-                    tr_running_loss = 0.0
+                    #print("{}, Parameter Gradient norm: {}".format(i+1, param_weight_grad_norm))
+                    #print("{}, Parameter Gradient norm: {}".format(i+1, param_weight_grad_norm), file=orig_stdout)
+                    #tr_running_loss = 0.0
+
 
             scheduler.step()
 

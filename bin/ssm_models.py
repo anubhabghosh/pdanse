@@ -236,7 +236,7 @@ class LorenzSSM(object):
         self.sigma_e2 = dB_to_lin(sigma_e2_dB)
         self.setStateCov(sigma_e2=self.sigma_e2)
         self.decimation_factor = int(self.delta / self.delta_d)
-        x_lorenz = np.zeros((T, self.n_states))
+        x_lorenz = np.zeros((T, self.n_states)) + 1e-6
         e_k_arr = np.random.multivariate_normal(self.mu_e, self.Ce, size=(T,))
         # print(x_lorenz.shape)
         for t in range(0, T - 1):
@@ -251,7 +251,8 @@ class LorenzSSM(object):
 
     def generate_measurement_sequence(self, x_lorenz, T, smnr_dB=10.0):
         # signal_p = ((self.h_fn(x_lorenz) - np.zeros_like(x_lorenz))**2).mean()
-        signal_p = np.var(self.h_fn(x_lorenz))
+        hx_lorenz = np.asarray([self.h_fn(x_lorenz[i,:]).reshape((-1,)) for i in range(x_lorenz.shape[0])])
+        signal_p = np.var(hx_lorenz)
         self.sigma_w2 = signal_p / dB_to_lin(smnr_dB)
         self.setMeasurementCov(sigma_w2=self.sigma_w2)
         w_k_arr = np.random.multivariate_normal(self.mu_w, self.Cw, size=(T,))
@@ -271,6 +272,7 @@ class LorenzSSM(object):
     def generate_single_sequence(self, T, sigma_e2_dB, smnr_dB):
         # print(T)
         x_lorenz = self.generate_state_sequence(T=T, sigma_e2_dB=sigma_e2_dB)
+        #x_lorenz = (x_lorenz - np.mean(x_lorenz, 0)) / np.std(x_lorenz, 0)
         y_lorenz = self.generate_measurement_sequence(
             x_lorenz=x_lorenz, T=T // self.decimation_factor, smnr_dB=smnr_dB
         )
