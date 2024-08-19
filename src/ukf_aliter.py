@@ -79,7 +79,7 @@ class UKF_Aliter(nn.Module):
         self.ukf.R = self.R_k.numpy()
         self.ukf.Q = self.Q_k.numpy()
         self.ukf.x = torch.ones((self.n_states,)).numpy()
-        self.ukf.P = (torch.eye(self.n_states)*1e-5).numpy()
+        self.ukf.P = (torch.eye(self.n_states)).numpy() #(torch.eye(self.n_states)*1e-5).numpy()
         return None
 
     def initialize(self):
@@ -124,6 +124,11 @@ class UKF_Aliter(nn.Module):
             for k in range(0, Ty):
                 
                 self.ukf.predict()
+                
+                if U is not None: # Optionally add the input
+                    u_k = U[i,k,:].numpy()
+                    self.ukf.x = np.add(self.ukf.x, u_k)
+
                 self.ukf.update(Y[i,k,:].numpy())       
                 traj_estimated[i,k,:] = torch.from_numpy(self.ukf.x)
                 Pk_estimated[i,k,:,:] = torch.from_numpy(self.ukf.P)

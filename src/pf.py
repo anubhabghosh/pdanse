@@ -45,7 +45,21 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         N_p = particles.shape[0]
         particles_f = np.empty((N_p, self.n_obs))
         for k in range(N_p):
-            particles_f[k, :] = self.f_k(torch.from_numpy(particles[k, :]).type(torch.FloatTensor).to(self.device)).numpy()
+            if u is None:
+                particles_f[k, :] = self.f_k(torch.from_numpy(particles[k, :]).type(torch.FloatTensor).to(self.device)).numpy()
+            else:
+                particles_f[k, :] = self.f_k(torch.from_numpy(particles[k, :]).type(torch.FloatTensor).to(self.device)).numpy() + u
+
+        #if u is None:
+        #    particles_f = torch.Tensor(list(map(self.f_k, torch.from_numpy(particles).type(torch.FloatTensor).to(self.device)))).numpy().reshape((-1,self.n_obs))
+        #else:
+        #    particles_f = torch.Tensor(list(map(self.f_k, torch.from_numpy(particles).type(torch.FloatTensor).to(self.device)))).numpy().reshape((-1,self.n_obs)) + u
+
+        #if u is None:
+        #    particles_f = self.f_k(torch.from_numpy(particles).type(torch.FloatTensor).to(self.device)).numpy()
+        #else:
+        #    particles_f = self.f_k(torch.from_numpy(particles).type(torch.FloatTensor).to(self.device)).numpy() + u
+
         return particles_f
 
     def calc_g(self, particles, t):
@@ -53,6 +67,8 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
         particles_g = np.empty((N_p, self.n_states))
         for k in range(N_p):
             particles_g[k, :] = self.g_k(torch.from_numpy(particles[k, :]).type(torch.FloatTensor).to(self.device)).numpy()
+        #particles_g = torch.Tensor(list(map(self.g_k, torch.from_numpy(particles).type(torch.FloatTensor).to(self.device)))).numpy().reshape((-1,self.n_states))
+        #particles_g = self.g_k(torch.from_numpy(particles).type(torch.FloatTensor).to(self.device)).numpy()
         return particles_g
 
     def push_to_device(self, x):
@@ -90,13 +106,13 @@ class PFModel(pyparticleest.models.nlg.NonlinearGaussianInitialGaussian):
 
         start = timer()
         for i in range(0, N):
-            self.initialize(R_k=Cw[i].numpy())
+            self.initialize(R_k=Cw[i].numpy().copy())
             y_in = Y[i, :, :].numpy().squeeze()
             if U is not None:
                 u_in = U[i, :, :].numpy().squeeze()
-                simulator_ = simulator.Simulator(self, u=u_in, y=y_in)
+                simulator_ = simulator.Simulator(self, u=u_in.copy(), y=y_in.copy())
             else:
-                simulator_ = simulator.Simulator(self, u=None, y=y_in)
+                simulator_ = simulator.Simulator(self, u=None, y=y_in.copy())
             simulator_.simulate(num_part=self.n_particles, num_traj=0, filter="pf", meas_first=True)
             traj_estimated[i, :, :] = torch.from_numpy(
                 simulator_.get_filtered_mean()

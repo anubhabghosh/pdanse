@@ -80,7 +80,6 @@ class EKF(nn.Module):
             F_k_prev = self.f_linearize(x=self.x_hat_pos_k).to(self.device)
         else:
             F_k_prev = self.compute_jac_f_k(x_=self.x_hat_pos_k).to(self.device)
-            
         self.Sk_pos_sqrt = torch.cholesky(Pk_pos_prev)
         Qk_prev_sqrt = torch.cholesky(Q_k_prev)
         A_state = torch.cat((F_k_prev @ self.Sk_pos_sqrt, Qk_prev_sqrt), dim=1)
@@ -90,7 +89,10 @@ class EKF(nn.Module):
         self.Sk_neg_sqrt = Ra.T[:,:self.n_states]
 
         # Time update equation
-        self.x_hat_neg_k = self.f_k(self.x_hat_pos_k) # Calculating the predicted state estimate using the previous filtered state estimate \hat{x}_{k-1 \vert k-1}^{+}
+        if u_k is None:
+            self.x_hat_neg_k = self.f_k(self.x_hat_pos_k) # Calculating the predicted state estimate using the previous filtered state estimate \hat{x}_{k-1 \vert k-1}^{+}
+        else:
+            self.x_hat_neg_k = self.f_k(self.x_hat_pos_k) + u_k # Usually assumed for additive u_k
         self.Pk_neg = self.Sk_neg_sqrt @ self.Sk_neg_sqrt.T # Calculating the predicted state estimate covariance 
 
         return self.x_hat_neg_k, self.Pk_neg
@@ -105,7 +107,7 @@ class EKF(nn.Module):
         
         self.R_k = R_k
         self.H_k = self.compute_jac_h_k(x_=self.x_hat_neg_k).to(self.device)
-        assert self.H_k.shape[1] == self.n_states, "Dimension of H_k is not consistent"
+        assert self.H_k.shape[1] == self.n_states, "Dimension of H_k is not consistent, {}".format(self.H_k.shape)
 
         # Trying to Square root algorithm since K_k is ill conditioned at the moment.
         # So, we use QR decomposition in the measurement equation
@@ -139,7 +141,7 @@ class EKF(nn.Module):
         H_k = autograd.functional.jacobian(self.h_k, x_)
         return H_k
 
-    def run_mb_filter(self, X, Y, Cw):
+    def run_mb_filter(self, X, Y, Cw, U=None):
         
         _, Ty, dy = Y.shape
         _, Tx, dx = X.shape
@@ -158,10 +160,13 @@ class EKF(nn.Module):
         for i in range(0, N):
             self.initialize_stats()
             for k in range(0, Ty):
-
-                x_rec_hat_neg_k, Pk_neg = self.predict_estimate(Pk_pos_prev=self.Pk_pos, Q_k_prev=self.Q_k)
                 
-                x_rec_hat_pos_k, Pk_pos = self.filtered_estimate(y_k=Y[i,k].view(-1,1),
+                if U is not None:
+                    x_rec_hat_neg_k, Pk_neg = self.predict_estimate(Pk_pos_prev=self.Pk_pos, Q_k_prev=self.Q_k, u_k=U[i,k,:])
+                else:
+                    x_rec_hat_neg_k, Pk_neg = self.predict_estimate(Pk_pos_prev=self.Pk_pos, Q_k_prev=self.Q_k)
+                
+                x_rec_hat_pos_k, Pk_pos = self.filtered_estimate(y_k=Y[i,k,:].view(-1,1),
                                                                  R_k=Cw[i])
             
                 # Save filtered state estimates

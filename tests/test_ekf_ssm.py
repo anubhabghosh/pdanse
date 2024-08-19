@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from config.parameters_opt import J_TEST
 from src.ekf import EKF
 
-def test_ekf_ssm(X_test, Y_test, ssm_model_test, f_fn, h_fn, Cw_test=None, device='cpu', use_Taylor=True):
+def test_ekf_ssm(X_test, Y_test, ssm_model_test, f_fn, h_fn, U_test=None, Cw_test=None, device='cpu', use_Taylor=True):
 
     # Initializing the extended Kalman filter model in PyTorch
     ekf_model = EKF(
@@ -33,7 +33,7 @@ def test_ekf_ssm(X_test, Y_test, ssm_model_test, f_fn, h_fn, Cw_test=None, devic
     Pk_estimated_ekf = None
 
     start_time_ekf = timer()
-    X_estimated_ekf, Pk_estimated_ekf, mse_arr_ekf = ekf_model.run_mb_filter(X_test, Y_test, Cw=Cw_test)
+    X_estimated_ekf, Pk_estimated_ekf, mse_arr_ekf = ekf_model.run_mb_filter(X_test, Y_test, Cw=Cw_test, U=U_test)
     time_elapsed_ekf = timer() - start_time_ekf
 
     return X_estimated_ekf, Pk_estimated_ekf, mse_arr_ekf, time_elapsed_ekf

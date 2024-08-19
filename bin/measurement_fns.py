@@ -100,4 +100,3 @@ def get_measurement_fn(fn_name):
 
     return MEASUREMENT_FN_LIST[fn_name.lower()]
 
-        

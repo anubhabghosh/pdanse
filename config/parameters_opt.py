@@ -624,13 +624,25 @@ def f_rossler_ukf(x, dt):
     return torch.matmul(F, x).numpy()
 
 
-def f_sinssm_fn(z, alpha=0.9, beta=1.1, phi=0.1 * math.pi, delta=0.01):
-    return alpha * torch.sin(beta * z + phi) + delta
+def f_nonlinear1d(x):
+    x_plus_1 = 0.5 * x + 25 * (x / (1.0 + x**2))
+    return x_plus_1
 
+def f_nonlinear1d_ekf_ukf(x):
+    x_plus_1 = 0.5 * x + 25 * (x / (1.0 + x**2))
+    return x_plus_1
 
-def h_sinssm_fn(z, a=1, b=1, c=0):
-    return a * (b * z + c)
+def f_nonlinear1d_ukf(x, dt):
+    x_plus_1 = 0.5 * x + 25 * (x / (1.0 + x**2))
+    return x_plus_1
 
+def cart2sph3dmod_ekf(x):
+    hx = torch.zeros_like(x)
+    hx[0] = torch.sqrt(torch.sum(torch.square(x)))
+    hx[1] = torch.atan2(x[1], x[0]+1e-10) # torch.sign(x[...,1]) * torch.acos(torch.div(x[...,0], torch.sqrt(torch.sum(torch.square(x)[...,:2]))))
+    hx[2] = x[2] #torch.acos(torch.div(x[...,2], torch.sqrt(torch.sum(torch.square(x), -1))))
+    assert not torch.isnan(hx).any(), "NaNs in measurement function, x={}, hx={}".format(x, hx)
+    return hx 
 
 def get_H_DANSE(type_, n_states, n_obs):
     if type_ == "LinearSSM":
@@ -659,13 +671,8 @@ def get_H_DANSE(type_, n_states, n_obs):
         )
     elif type_ == "Lorenz96SSMrn{}".format(n_obs):
         return H_RN_20_20[:n_obs, :]
-    elif type_ == "SinusoidalSSM":
-        return jacobian(
-            h_sinssm_fn,
-            torch.randn(
-                n_states,
-            ),
-        ).numpy()
+    elif type_ == "Nonlinear1DSSM":
+        return 0.10 * np.eye(n_states)
 
 
 def get_parameters(
@@ -1051,7 +1058,7 @@ def get_parameters(
             "kappa": 0.10,
             "H": None,
             "h_fn_type": measurment_fn_type,
-            "n_MC": 50,
+            "n_MC": 10,
             "mu_x0": np.zeros((n_states,)),
             "C_x0": np.eye(n_states, n_states),
             "batch_size": 64,
@@ -1064,9 +1071,9 @@ def get_parameters(
                     "output_size": n_states,
                     "n_hidden": 80,
                     "n_layers": 2,
-                    "lr": 2e-4,
+                    "lr": 1e-4,
                     "num_epochs": 6000,
-                    "min_delta": 1e-3,
+                    "min_delta": 1e-4,
                     "n_hidden_dense": 128,
                     "device": device,
                 },

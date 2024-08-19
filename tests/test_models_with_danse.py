@@ -52,6 +52,7 @@ from config.parameters_opt import (
     f_rossler_ukf,
     f_nonlinear1d,
     f_nonlinear1d_ukf,
+    cart2sph3dmod_ekf,
     J_TEST,
     DELTA_T_LORENZ63,
     DELTA_T_CHEN,
@@ -119,6 +120,8 @@ def test_on_ssm_model(
     metrics_list=None,
     models_list=None,
     dirname=None,
+    figdirname=None,
+    n_particles_pf=100
 ):
     model_file_saved_danse = (
         learnable_model_files["danse"] if "danse" in models_list else None
@@ -147,7 +150,7 @@ def test_on_ssm_model(
 
     J = 5
     J_test = J_TEST
-    n_particles = 300
+    n_particles = n_particles_pf
     # smnr_dB = 20
     decimate = True
     use_Taylor = False
@@ -266,7 +269,7 @@ def test_on_ssm_model(
             u_test = torch.Tensor(
                 [ssm_model_test.generate_driving_noise(k) for k in range(T_test)]
             ).type(torch.FloatTensor)
-            U_test = u_test.unsqueeze(0).repeat(N_test, 1, 1)
+            U_test = u_test.unsqueeze(-1).unsqueeze(0).repeat(N_test, 1, 1)
 
         print(
             "Test data generated using sigma_e2: {} dB, SMNR: {} dB".format(
@@ -330,6 +333,8 @@ def test_on_ssm_model(
     #Y = Y[idx]
     #X = X[idx]
     #Cw = Cw[idx]
+    #if "Nonlinear1DSSM" in ssm_type_test:
+    #    U_test = U_test[idx]
     ###########################################################################################################
 
     # Collecting all estimator results
@@ -359,6 +364,8 @@ def test_on_ssm_model(
                 torch.pinverse(H_tensor[i]) @ Y[i, j, :].reshape((dy, 1))
             ).reshape((dx,))
     time_elapsed_ls = timer() - start_time_ls
+    X_estimated_dict["true"] = X
+    X_estimated_dict["meas"] = Y
     X_estimated_dict["ls"]["est"] = X_LS
 
     #####################################################################################################################################################################
@@ -391,8 +398,9 @@ def test_on_ssm_model(
             Y_test=Y,
             ssm_model_test=ssm_model_test,
             f_fn=f_fn,
-            h_fn=get_measurement_fn(fn_name=h_fn_type_test),
+            h_fn=cart2sph3dmod_ekf if h_fn_type_test == "cart2sph3dmod" else get_measurement_fn(fn_name=h_fn_type_test),
             Cw_test=Cw,
+            U_test=U_test if "Nonlinear1DSSM" in ssm_type_test else None,
             device=device,
             use_Taylor=use_Taylor,
         )
@@ -400,25 +408,6 @@ def test_on_ssm_model(
         X_estimated_dict["ekf"]["est_cov"] = Pk_estimated_ekf
     else:
         X_estimated_ekf, Pk_estimated_ekf, _, time_elapsed_ekf = None, None, None, None
-
-    # Estimator: PF
-    if "pf" in models_list:
-        print("Testing PF ...", file=orig_stdout)
-        X_estimated_pf, Pk_estimated_pf, mse_arr_pf, time_elapsed_pf = test_pf_ssm(
-            X_test=X,
-            Y_test=Y,
-            ssm_model_test=ssm_model_test,
-            f_fn=f_fn,
-            n_particles=n_particles,
-            h_fn=get_measurement_fn(fn_name=h_fn_type_test),
-            Cw_test=Cw,
-            device=device,
-            U_test=U_test if "Nonlinear1DSSM" in ssm_type else None,
-        )
-        X_estimated_dict["pf"]["est"] = X_estimated_pf
-        X_estimated_dict["pf"]["est_cov"] = Pk_estimated_pf
-    else:
-        X_estimated_pf, Pk_estimated_pf, _, time_elapsed_pf = None, None, None, None
 
     # Estimator: UKF
     if "ukf" in models_list:
@@ -429,6 +418,7 @@ def test_on_ssm_model(
             ssm_model_test=ssm_model_test,
             f_ukf_fn=f_ukf_fn,
             h_ukf_fn=get_measurement_fn(fn_name=h_fn_type_test),
+            U_test=U_test if "Nonlinear1DSSM" in ssm_type_test else None,
             Cw_test=Cw,
             device=device,
         )
@@ -458,6 +448,27 @@ def test_on_ssm_model(
     else:
         X_estimated_ukf, Pk_estimated_ukf, _, time_elapsed_ukf = None, None, None, None
         Y_estimated_ukf_pred, Py_estimated_ukf_pred = None, None
+
+    # Estimator: PF
+    if "pf" in models_list:
+        print("Testing PF ...", file=orig_stdout)
+        X_estimated_pf, Pk_estimated_pf, mse_arr_pf, time_elapsed_pf = test_pf_ssm(
+            X_test=X,
+            Y_test=Y,
+            ssm_model_test=ssm_model_test,
+            f_fn=f_fn,
+            n_particles=n_particles,
+            h_fn=get_measurement_fn(fn_name=h_fn_type_test),
+            Cw_test=Cw,
+            device=device,
+            U_test=U_test if "Nonlinear1DSSM" in ssm_type else None,
+        )
+        X_estimated_dict["pf"]["est"] = X_estimated_pf
+        X_estimated_dict["pf"]["est_cov"] = Pk_estimated_pf
+    else:
+        X_estimated_pf, Pk_estimated_pf, _, time_elapsed_pf = None, None, None, None
+
+    
     #####################################################################################################################################################################
 
     #####################################################################################################################################################################
@@ -558,6 +569,10 @@ def test_on_ssm_model(
     #####################################################################################################################################################################
 
     #####################################################################################################################################################################
+    
+    # Saving the estimator results
+    torch.save(X_estimated_dict, os.path.join(os.path.join(figdirname, dirname, evaluation_mode), 'test_results_nsuP_{}_smnr_{}.pt'.format(nsup, smnr_dB_test))); 
+
     # Metrics calculation
     metrics_dict_for_one_smnr = dict.fromkeys(metrics_list, {})
 
@@ -648,8 +663,8 @@ def test_on_ssm_model(
             X=torch.squeeze(X[0, :, :], 0).numpy(),
             legend="$\\mathbf{x}^{true}$",
             m="b-",
-            savefig_name="./figs/{}/{}/{}_x_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+            savefig_name="./{}/{}/{}/{}_x_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                figdirname, dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
             ),
             savefig=True,
         )
@@ -658,8 +673,8 @@ def test_on_ssm_model(
             Y=torch.squeeze(Y[0, :, :], 0).numpy(),
             legend="$\\mathbf{y}^{true}$",
             m="r-",
-            savefig_name="./figs/{}/{}/{}_y_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+            savefig_name="./{}/{}/{}/{}_y_true_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                figdirname, dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
             ),
             savefig=True,
         )
@@ -669,8 +684,8 @@ def test_on_ssm_model(
                 X=torch.squeeze(X_estimated_ukf[0], 0).numpy(),
                 legend="$\\hat{\mathbf{x}}_{UKF}$",
                 m="k-",
-                savefig_name="./figs/{}/{}/{}_x_ukf_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                savefig_name="./{}/{}/{}/{}_x_ukf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    figdirname, dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
                 ),
                 savefig=True,
             )
@@ -680,8 +695,8 @@ def test_on_ssm_model(
                 X=torch.squeeze(X_estimated_pf[0], 0).numpy(),
                 legend="$\\hat{\mathbf{x}}_{PF}$",
                 m="k-",
-                savefig_name="./figs/{}/{}/{}_x_pf_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                savefig_name="./{}/{}/{}/{}_x_pf_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    figdirname, dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
                 ),
                 savefig=True,
             )
@@ -693,8 +708,8 @@ def test_on_ssm_model(
                 ).numpy(),
                 legend="$\\hat{\mathbf{x}}_{SemiDANSE+}$",
                 m="k-",
-                savefig_name="./figs/{}/{}/{}_x_semidanse_plus_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                savefig_name="./{}/{}/{}/{}_x_semidanse_plus_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    figdirname, dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
                 ),
                 savefig=True,
             )
@@ -704,8 +719,8 @@ def test_on_ssm_model(
                 X=torch.squeeze(X_estimated_filtered_dmm_causal[0], 0).numpy(),
                 legend="$\\hat{\mathbf{x}}_{DMM}$",
                 m="k-",
-                savefig_name="./figs/{}/{}/{}_x_dmm_causal_sigmae2_{}dB_smnr_{}dB.pdf".format(
-                    dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
+                savefig_name="./{}/{}/{}/{}_x_dmm_causal_sigmae2_{}dB_smnr_{}dB.pdf".format(
+                    figdirname, dirname, evaluation_mode, ssm_type_test, sigma_e2_dB_test, smnr_dB_test
                 ),
                 savefig=True,
             )
@@ -734,8 +749,8 @@ def test_on_ssm_model(
         if "kalmannet" in models_list
         else None,
         savefig=True,
-        savefig_name="./figs/{}/{}/AxesAll_sigmae2_{}dB_smnr_{}dB.pdf".format(
-            dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
+        savefig_name="./{}/{}/{}/AxesAll_sigmae2_{}dB_smnr_{}dB.pdf".format(
+            figdirname, dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
         ),
     )
 
@@ -779,8 +794,8 @@ def test_on_ssm_model(
         if "danse_semisupervised_plus" in models_list
         else None,
         savefig=True,
-        savefig_name="./figs/{}/{}/Axes_w_lims_sigmae2_{}dB_smnr_{}dB.pdf".format(
-            dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
+        savefig_name="./{}/{}/{}/Axes_w_lims_sigmae2_{}dB_smnr_{}dB.pdf".format(
+            figdirname, dirname, evaluation_mode, sigma_e2_dB_test, smnr_dB_test
         ),
     )
     
@@ -826,17 +841,18 @@ def test_on_ssm_model(
 
 if __name__ == "__main__":
     # Testing parameters
-    ssm_name = "Nonlinear1D"
-    h_fn_type = "relu"
-    m = 1
-    n = 1
+    ssm_name = "Lorenz"
+    h_fn_type = "cart2sph3dmod"
+    m = 3
+    n = 3
+    n_particles = 100
     T_train = 200
     N_train = 1000
     T_test = 2000
     N_test = 100
-    sigma_e2_dB_test = 10.0
+    sigma_e2_dB_test = -10.0
     device = "cpu"
-    nsup = 50
+    nsup = 20
     bias = None  # By default should be positive, equal to 10.0
     p = None  # Keep this fixed at zero for now, equal to 0.0
     mode = "full"
@@ -846,8 +862,8 @@ if __name__ == "__main__":
         bias = None
         p = None
         evaluation_mode = (
-            "ModTest_diff_smnr_nsup_{}_Ntrain_{}_Ttrain_{}_refactored_npart300".format(
-                nsup, N_train, T_train
+            "ModTest_diff_smnr_nsup_{}_Ntrain_{}_Ttrain_{}_Ntest_{}_T_test_{}_refactored_nparticles_{}".format(
+                nsup, N_train, T_train, N_test, T_test, n_particles
             )
         )
     ssmtype = (
@@ -856,20 +872,21 @@ if __name__ == "__main__":
         else "{}SSM_{}".format(ssm_name, h_fn_type)
     )  # Hardcoded for {}SSMrn{} (random H low rank), {}SSMn{} (deterministic H low rank),
     dirname = "{}SSMn{}x{}_{}".format(ssm_name, m, n, h_fn_type)
-    os.makedirs("./figs/{}/{}".format(dirname, evaluation_mode), exist_ok=True)
+    figdirname="figs_final"
+    os.makedirs("./{}/{}/{}".format(figdirname, dirname, evaluation_mode), exist_ok=True)
 
     smnr_dB_arr = np.array([10.0, 30.0])
     smnr_dB_dict_arr = ["{}dB".format(smnr_dB) for smnr_dB in smnr_dB_arr]
 
-    list_of_models_comparison = ["ls", "ekf", "pf", "danse_semisupervised_plus"]
+    list_of_models_comparison = ["ls", "pf", "danse_semisupervised_plus"]
     list_of_display_fmts = ["gp-.", "rd--", "ks--", "bo-", "mo-", "ys-", "co-"]
     list_of_metrics = ["nmse", "nmse_std", "mse_dB", "mse_dB_std", "time_elapsed"]
 
-    # metrics_dict = dict.fromkeys(list_of_metrics, {})
+    metrics_dict = dict.fromkeys(list_of_metrics, {})
 
-    # for metric in list_of_metrics:
-    #    for model_name in list_of_models_comparison:
-    #        metrics_dict[metric][model_name] = np.zeros((len(smnr_dB_arr)))
+    for metric in list_of_metrics:
+        for model_name in list_of_models_comparison:
+            metrics_dict[metric][model_name] = np.zeros((len(smnr_dB_arr)))
 
     metrics_multidim_mat = np.zeros(
         (len(list_of_metrics), len(list_of_models_comparison), len(smnr_dB_arr))
@@ -971,6 +988,8 @@ if __name__ == "__main__":
             metrics_list=list_of_metrics,
             models_list=list_of_models_comparison,
             dirname=dirname,
+            figdirname=figdirname,
+            n_particles_pf=n_particles
         )
 
         for idx_metric, idx_model_name in itertools.product(
@@ -1012,7 +1031,8 @@ if __name__ == "__main__":
             plt.tight_layout()
             # plt.subplot(212)
             tikzplotlib.save(
-                "./figs/{}/{}/{}_vs_SMNR_{}.tex".format(
+                "./{}/{}/{}/{}_vs_SMNR_{}.tex".format(
+                    figdirname,
                     dirname,
                     evaluation_mode,
                     list_of_metrics[idx_display_metric].upper(),
@@ -1020,7 +1040,8 @@ if __name__ == "__main__":
                 )
             )
             plt.savefig(
-                "./figs/{}/{}/{}_vs_SMNR_{}.pdf".format(
+                "./{}/{}/{}/{}_vs_SMNR_{}.pdf".format(
+                    figdirname,
                     dirname,
                     evaluation_mode,
                     list_of_metrics[idx_display_metric].upper(),
@@ -1046,7 +1067,8 @@ if __name__ == "__main__":
             plt.tight_layout()
             # plt.subplot(212)
             tikzplotlib.save(
-                "./figs/{}/{}/{}_vs_SMNR_{}.tex".format(
+                "./{}/{}/{}/{}_vs_SMNR_{}.tex".format(
+                    figdirname,
                     dirname,
                     evaluation_mode,
                     list_of_metrics[idx_display_metric].upper(),
@@ -1054,7 +1076,8 @@ if __name__ == "__main__":
                 )
             )
             plt.savefig(
-                "./figs/{}/{}/{}_vs_SMNR_{}.pdf".format(
+                "./{}/{}/{}/{}_vs_SMNR_{}.pdf".format(
+                    figdirname,
                     dirname,
                     evaluation_mode,
                     list_of_metrics[idx_display_metric].upper(),

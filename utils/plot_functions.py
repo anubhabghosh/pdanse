@@ -85,7 +85,7 @@ def plot_state_trajectory_w_lims(
         if not X_est_EKF is None:
             ax.plot(
                 X_est_EKF[T_start:T_end, idim],
-                "x-",
+                "o-",
                 ms=5,
                 color="blue",
                 label="$\\hat{\mathbf{x}}_{EKF}$",
@@ -165,22 +165,6 @@ def plot_state_trajectory_w_lims(
                 X_est_KF[T_start:T_end, idim]
                 + sigma * X_est_KF_std[T_start:T_end, idim],
                 facecolor="green",
-                alpha=0.4,
-            )
-        if not X_est_EKF is None:
-            ax.plot(
-                X_est_EKF[T_start:T_end, idim],
-                "b.-",
-                label="$\\hat{\mathbf{x}}_{EKF}$",
-                lw=lw,
-            )
-            ax.fill_between(
-                np.arange(X_est_EKF[T_start:T_end, idim].shape[0]),
-                X_est_EKF[T_start:T_end, idim]
-                - sigma * X_est_EKF_std[T_start:T_end, idim],
-                X_est_EKF[T_start:T_end, idim]
-                + sigma * X_est_EKF_std[T_start:T_end, idim],
-                facecolor="orange",
                 alpha=0.4,
             )
         if not X_est_SemiDANSE is None:
@@ -381,6 +365,24 @@ def plot_state_trajectory_w_lims(
                 X_est_DANSE[T_start:T_end, idim]
                 + sigma * X_est_DANSE_std[T_start:T_end, idim],
                 facecolor="red",
+                alpha=0.4,
+            )
+        if not X_est_PF is None:
+            ax.plot(
+                X_est_PF[T_start:T_end, idim],
+                "x-",
+                ms=5,
+                color="green",
+                label="$\\hat{\mathbf{x}}_{PF}$",
+                lw=lw,
+            )
+            ax.fill_between(
+                np.arange(X_est_PF[T_start:T_end, idim].shape[0]),
+                X_est_PF[T_start:T_end, idim]
+                - sigma * X_est_PF_std[T_start:T_end, idim],
+                X_est_PF[T_start:T_end, idim]
+                + sigma * X_est_PF_std[T_start:T_end, idim],
+                facecolor="green",
                 alpha=0.4,
             )
         if not X_est_DANSE_sup is None:
@@ -1247,7 +1249,7 @@ def plot_state_trajectory_axes_all(
                 X_est_KNET[:T_end, 0], "c--.", label="$\\hat{\mathbf{x}}_{KalmanNet} $"
             )
         if not X_est_EKF is None:
-            plt.plot(X_est_EKF[:T_end, 0], "b.-", label="$\\hat{\mathbf{x}}_{EKF} $")
+            plt.plot(X_est_EKF[:T_end, 0], "b.--", label="$\\hat{\mathbf{x}}_{EKF} $")
         if not X_est_UKF is None:
             plt.plot(
                 X_est_UKF[:T_end, 0],
@@ -1376,6 +1378,14 @@ def plot_state_trajectory_axes_all(
             plt.plot(X_est_EKF[:T_end, 0], ":", label="$\\hat{\mathbf{x}}_{EKF} $")
         if not X_est_UKF is None:
             plt.plot(X_est_UKF[:T_end, 0], ":", label="$\\hat{\mathbf{x}}_{UKF} $")
+        if not X_est_PF is None:
+            plt.plot(
+                X_est_PF[:T_end, 0],
+                "-x",
+                ms=4,
+                color="green",
+                label="$\\hat{\mathbf{x}}_{PF} $",
+            )
         plt.ylabel("$X_1$")
         plt.xlabel("$t$")
         plt.legend()
@@ -1406,6 +1416,14 @@ def plot_state_trajectory_axes_all(
             plt.plot(X_est_EKF[:T_end, 1], ":", label="$\\hat{\mathbf{x}}_{EKF}  $")
         if not X_est_UKF is None:
             plt.plot(X_est_UKF[:T_end, 1], ":", label="$\\hat{\mathbf{x}}_{UKF} $")
+        if not X_est_PF is None:
+            plt.plot(
+                X_est_PF[:T_end, 1],
+                "-x",
+                ms=4,
+                color="green",
+                label="$\\hat{\mathbf{x}}_{PF} $",
+            )
         plt.ylabel("$X_2$")
         plt.xlabel("$t$")
         plt.legend()
@@ -1434,6 +1452,14 @@ def plot_state_trajectory_axes_all(
             plt.plot(X_est_EKF[:T_end, 2], ":", label="$\\hat{\mathbf{x}}_{EKF} $")
         if not X_est_UKF is None:
             plt.plot(X_est_UKF[:T_end, 2], ":", label="$\\hat{\mathbf{x}}_{UKF} $")
+        if not X_est_PF is None:
+            plt.plot(
+                X_est_PF[:T_end, 2],
+                "-x",
+                ms=4,
+                color="green",
+                label="$\\hat{\mathbf{x}}_{PF} $",
+            )
         plt.ylabel("$X_3$")
         plt.xlabel("$t$")
         plt.legend()
