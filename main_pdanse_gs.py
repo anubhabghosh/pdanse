@@ -22,7 +22,7 @@ from config.parameters_opt import get_H_DANSE, get_parameters # noqa: E402
 
 # from utils.plot_functions import plot_measurement_data, plot_measurement_data_axes, plot_state_trajectory, plot_state_trajectory_axes
 # Import estimator model and functions
-from src.semidanse_plus import SemiDANSEplus, train_danse_semisupervised_plus # noqa: E402
+from src.pdanse import pDANSE, train_pdanse # noqa: E402
 from utils.gs_utils import create_list_of_dicts # noqa: E402
 from utils.utils import (  # noqa: E402
     NDArrayEncoder,
@@ -197,7 +197,7 @@ def main():
         dataset_type += "_" + norm_indicator.lower()
 
     # NOTE: Currently this is hardcoded into the system
-    main_exp_name = "{}_{}_danse_semisupervised_opt_{}_nsup_{}_m_{}_n_{}_T_{}_N_{}_sigmae2_{}dB_smnr_{}dB".format(
+    main_exp_name = "{}_{}_pdanse_opt_{}_nsup_{}_m_{}_n_{}_T_{}_N_{}_sigmae2_{}dB_smnr_{}dB".format(
         dataset_type,
         measurement_fn_type,
         model_type,
@@ -285,9 +285,9 @@ def main():
     for i, gs_option in enumerate(gs_list_of_options):
         # Load the model with the corresponding options
         gs_option["kappa"] = kappa
-        model_semidanse_plus = SemiDANSEplus(**gs_option)
+        model_semidanse_plus = pDANSE(**gs_option)
         tr_verbose = True
-        print("*"*100);
+        print("*"*100)
         print("Config number: {}".format(i+1))
         print("Chosen value of kappa: {}".format(model_semidanse_plus.kappa))
 
@@ -301,7 +301,7 @@ def main():
             best_val_loss,
             tr_loss_for_best_val_loss,
             _,
-        ) = train_danse_semisupervised_plus(
+        ) = train_pdanse(
             model=model_semidanse_plus,
             train_loader_unsup=train_loader_unsup,
             val_loader_unsup=val_loader_unsup,

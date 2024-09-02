@@ -32,7 +32,7 @@ def push_model(nets, device="cpu"):
     return nets
 
 
-class SemiDANSEplus(nn.Module):
+class pDANSE(nn.Module):
     def __init__(
         self,
         n_states,
@@ -50,7 +50,7 @@ class SemiDANSEplus(nn.Module):
         kappa=0.2,
         device="cpu",
     ):
-        super(SemiDANSEplus, self).__init__()
+        super(pDANSE, self).__init__()
 
         self.device = device
 
@@ -337,7 +337,7 @@ class SemiDANSEplus(nn.Module):
         return elbo_batch_avg
 
 
-def train_danse_semisupervised_plus(
+def train_pdanse(
     model,
     options,
     train_loader_unsup,
@@ -376,7 +376,7 @@ def train_danse_semisupervised_plus(
     if save_chkpoints == "all" or save_chkpoints == "some":
         # No grid search
         if logfile_path is None:
-            training_logfile = "./log/danse_semisupervised_{}.log".format(
+            training_logfile = "./log/pdanse_{}.log".format(
                 model.rnn_type
             )
         else:
@@ -385,7 +385,7 @@ def train_danse_semisupervised_plus(
     elif save_chkpoints is None:
         # Grid search
         if logfile_path is None:
-            training_logfile = "./log/gs_training_danse_semisupervised_{}.log".format(
+            training_logfile = "./log/gs_training_pdanse_{}.log".format(
                 model.rnn_type
             )
         else:
@@ -767,7 +767,7 @@ def train_danse_semisupervised_plus(
                     model,
                     model_filepath
                     + "/"
-                    + "danse_semisupervised_{}_ckpt_epoch_{}.pt".format(
+                    + "pdanse_{}_ckpt_epoch_{}.pt".format(
                         model.rnn_type, epoch + 1
                     ),
                 )
@@ -777,7 +777,7 @@ def train_danse_semisupervised_plus(
                     model,
                     model_filepath
                     + "/"
-                    + "danse_semisupervised_{}_ckpt_epoch_{}.pt".format(
+                    + "pdanse_{}_ckpt_epoch_{}.pt".format(
                         model.rnn_type, epoch + 1
                     ),
                 )
@@ -854,12 +854,12 @@ def train_danse_semisupervised_plus(
         if save_chkpoints == "all" or save_chkpoints == "some":
             # Save the best model using the designated filename
             if best_model_wts is not None:
-                model_filename = "danse_semisupervised_{}_ckpt_epoch_{}_best.pt".format(
+                model_filename = "pdanse_{}_ckpt_epoch_{}_best.pt".format(
                     model.rnn_type, best_val_epoch
                 )
                 torch.save(best_model_wts, model_filepath + "/" + model_filename)
             else:
-                model_filename = "danse_semisupervised_{}_ckpt_epoch_{}_best.pt".format(
+                model_filename = "pdanse_{}_ckpt_epoch_{}_best.pt".format(
                     model.rnn_type, epoch + 1
                 )
                 print("Saving last model as best...")
@@ -879,7 +879,7 @@ def train_danse_semisupervised_plus(
             print("Interrupted!! ...saving the model at epoch:{}".format(epoch + 1))
 
         if save_chkpoints is not None:
-            model_filename = "danse_semisupervised_{}_ckpt_epoch_{}_latest.pt".format(
+            model_filename = "pdanse_{}_ckpt_epoch_{}_latest.pt".format(
                 model.rnn_type, epoch + 1
             )
             torch.save(model, model_filepath + "/" + model_filename)

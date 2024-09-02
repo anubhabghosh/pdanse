@@ -3,13 +3,13 @@
 # Creator: Anubhab Ghosh, Nov 2023.
 
 # The python kernel version e.g. to run on python 3.8 version use: python3.8
-PYTHON="python3.7"
+PYTHON="python3.8"
 
 # The number of i.i.d. trajectories each of length T that constitute the training data
-N=1000
+N=100
 
 # Length of each such training data trajectory, default it is set to T=1000
-T=100
+T=200
 
 # Number of hidden states in a dynamical system, usually for Lorenz (a.k.a. Lorenz-63), Chen and Rossler
 # attractors, the number of hidden states is equal to 3, while for Lorenz-96, this value must be changed to
@@ -20,7 +20,7 @@ n_states=3
 n_obs=3
 
 # Measurement function type
-h_fn_type="poly"
+h_fn_type="relu"
 
 # dataset_type defines the type of dynamical system, the general terminology, e.g. for the Lorenz 63 system, 
 # the type is LorenzSSM, similarly for Chen and Rossler attractor we have ChenSSM and RosslerSSM respectively.
@@ -41,7 +41,7 @@ output_path="./data/synthetic_data/"
 sigma_e2_dB=-10.0
 
 # For different signal-to-measurement-noise ratio (SMNRs), run the data generation 
-for smnr in 10.0
+for smnr in 20.0
 do
     ${PYTHON} ${script_name} \
     --n_states ${n_states} \
