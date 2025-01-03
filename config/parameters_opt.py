@@ -1053,7 +1053,7 @@ def get_parameters(
                 },
             },
         },
-        "danse_semisupervised_plus": {
+        "pdanse": {
             "n_states": n_states,
             "n_obs": n_obs,
             "mu_w": np.zeros((n_obs,)),

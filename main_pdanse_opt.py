@@ -20,7 +20,7 @@ from config.parameters_opt import get_H_DANSE, get_parameters  # noqa: E402
 
 # from utils.plot_functions import plot_measurement_data, plot_measurement_data_axes, plot_state_trajectory, plot_state_trajectory_axes
 # Import estimator model and functions
-from src.semidanse_plus import SemiDANSEplus, train_danse_semisupervised_plus  # noqa: E402
+from src.pdanse import pDANSE, train_pdanse  # noqa: E402
 from utils.utils import (  # noqa: E402
     NDArrayEncoder,
     check_if_dir_or_file_exists,
@@ -108,11 +108,11 @@ def main():
         measurment_fn_type=measurement_fn_type,
     )
 
-    batch_size = est_parameters_dict["danse_semisupervised_plus"][
+    batch_size = est_parameters_dict["pdanse"][
         "batch_size"
     ]  # Set the batch size
     estimator_options = est_parameters_dict[
-        "danse_semisupervised_plus"
+        "pdanse"
     ]  # Get the options for the estimator
 
     if not os.path.isfile(datafile):
@@ -196,7 +196,7 @@ def main():
         dataset_type += "_" + norm_indicator.lower()
 
     # NOTE: Currently this is hardcoded into the system
-    main_exp_name = "{}_{}_danse_semisupervised_opt_{}_nsup_{}_m_{}_n_{}_T_{}_N_{}_sigmae2_{}dB_smnr_{}dB".format(
+    main_exp_name = "{}_{}_pdanse_opt_{}_nsup_{}_m_{}_n_{}_T_{}_N_{}_sigmae2_{}dB_smnr_{}dB".format(
         dataset_type,
         measurement_fn_type,
         model_type,
@@ -244,12 +244,12 @@ def main():
 
     if mode.lower() == "train":
         estimator_options["kappa"] = kappa
-        model_semidanse_plus = SemiDANSEplus(**estimator_options)
+        model_semidanse_plus = pDANSE(**estimator_options)
         tr_verbose = True
         print("Chosen value of kappa: {}".format(model_semidanse_plus.kappa))
 
         # Starting model training
-        tr_losses, val_losses, _, _, _ = train_danse_semisupervised_plus(
+        tr_losses, val_losses, _, _, _ = train_pdanse(
             model=model_semidanse_plus,
             train_loader_unsup=train_loader_unsup,
             val_loader_unsup=val_loader_unsup,
@@ -273,7 +273,7 @@ def main():
         with open(
             os.path.join(
                 os.path.join(logfile_path, main_exp_name),
-                "danse_semisupervised_plus_{}_losses_eps{}.json".format(
+                "pdanse_{}_losses_eps{}.json".format(
                     estimator_options["rnn_type"],
                     estimator_options["rnn_params_dict"][model_type]["num_epochs"],
                 ),
