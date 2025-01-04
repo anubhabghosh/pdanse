@@ -101,3 +101,5 @@ For the `datafile` and `splits` arguments:
 ## Evaluation
 
 Once files are created, the evaluation can be done by calling the script in `/tests/test_models_with_danse.py`. Paths to model files and log files should be edited in the script directly. The results can be visualized using Jupyter notebooks found in `analysis_ipynbs/`
+
+[ ] TODO: More updates to the repository description is in progress
