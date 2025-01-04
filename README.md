@@ -1,4 +1,5 @@
-# Particle DANSE: ICASSP 2025
+# Particle DANSE (pDANSE)
+
 This repository contains code related to the ICASSP 2025 paper: 
 
 *Particle-based Data-driven Nonlinear State Estimation of Model-free Process from Nonlinear Measurements*
@@ -36,7 +37,7 @@ Details about these models and their underlying dynamics can be found in `./bin/
 
 NOTE: The testing code also has functionality to test against other model-based filters such as the extended Kalman filter (EKF) and the unscented Kalman filter (UKF)
 
-## GPU Support
+## GPU Support for training
 
 The training-based methods: pDANSE was run on a single NVIDIA-Tesla P100 GPU with 16 GB of memory. 
 
