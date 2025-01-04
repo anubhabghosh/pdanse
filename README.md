@@ -23,12 +23,11 @@ It is recommended to build an environment either in [`pip`](https://packaging.py
 
 The experiments were carried out using synthetic data generated with linear and non-linear SSMs:
 
-- Linear state space models (Linear SSMs)
 - Non-linear state space models (Non-linear SSMs): In our case, we used chaotic attractors:
-    - Lorenz attractor 
-    - Chen attractor
-    - Lorenz-96 attractor
-
+    - Lorenz attractor
+ 
+and a rectified linear measurement function (ReLU(x) = max(0, x)) as the nonlinearity. 
+  
 Details about these models and their underlying dynamics can be found in `./bin/ssm_models.py`. 
 
 ## Reference models (implemented in PyTorch + Numpy)
@@ -79,7 +78,7 @@ This would be the required organization of files and folders for reproducing res
 
 1. Generate data by calling `bin/generate_data.py`. This can be done in a simple manner by editing and calling the shell script `run_generate_data.sh`. Data gets stored at `data/synthetic_data/`. For e.g. to generate trajectory data with 1000 samples with each trajectory of length 100, from a Lorenz Attractor model (m=3, n=3), with $\sigma_{e}^{2}= -10$ dB, and $\text{SMNR}$ = $0$ dB, the syntax should be 
 ````
-python3 ./bin/generate_data.py --n_states 3 --n_obs 3 --num_samples 1000 --sequence_length 100 --sigma_e2_dB -10 --smnr 0 --dataset_type LorenzSSM --output_path ./data/synthetic_data/
+[PYTHON KERNEL] ./bin/generate_data.py --n_states 3 --n_obs 3 --num_samples 1000 --sequence_length 100 --sigma_e2_dB -10 --smnr 0 --dataset_type LorenzSSM --output_path ./data/synthetic_data/
 ````
 2. Edit the hyper-parameters for the DANSE architecture in `./config/parameters_opt.py`.
 
@@ -90,8 +89,8 @@ python3 ./bin/generate_data.py --n_states 3 --n_obs 3 --num_samples 1000 --seque
 --rnn_model_type gru \
 --dataset_type LorenzSSM \
 --n_sup 20 \
---datafile ./data/synthetic_data/trajectories_m_3_n_3_LorenzSSM_data_T_100_N_1000_sigmae2_-10.0dB_smnr_0.0dB.pkl \
---splits ./data/synthetic_data/splits_m_3_n_3_LorenzSSM_data_T_100_N_1000_sigmae2_-10.0dB_smnr_0.0dB.pkl
+--datafile ./data/synthetic_data/trajectories_m_3_n_3_LorenzSSM_relu_data_T_100_N_1000_sigmae2_-10.0dB_smnr_0.0dB.pkl \
+--splits ./data/synthetic_data/splits_m_3_n_3_LorenzSSM_relu_data_T_100_N_1000_sigmae2_-10.0dB_smnr_0.0dB.pkl
 ```
 For the `datafile` and `splits` arguments:
 `N` denotes the number of sample trajectories, `T` denotes the length of each sample trajectory. 
