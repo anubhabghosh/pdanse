@@ -144,7 +144,7 @@ def test_on_ssm_model(
     )
 
     ssm_type, h_fn_type, rnn_type, nsup, m, n, T, _, sigma_e2_dB, smnr_dB = parse(
-        "{}_{}_danse_semisupervised_opt_{}_nsup_{}_m_{:d}_n_{:d}_T_{:d}_N_{:d}_sigmae2_{:f}dB_smnr_{:f}dB",
+        "{}_{}_pdanse_opt_{}_nsup_{}_m_{:d}_n_{:d}_T_{:d}_N_{:d}_sigmae2_{:f}dB_smnr_{:f}dB",
         model_file_saved_pdanse.split("/")[-2],
     )
 
@@ -787,7 +787,7 @@ def test_on_ssm_model(
         X_est_PF=torch.squeeze(X_estimated_pf[figid_, :, :], 0).numpy()
         if "pf" in models_list
         else None,
-        X_est_SemiDANSE=torch.squeeze(
+        X_est_pDANSE=torch.squeeze(
             X_estimated_filtered_pdanse[figid_], 0
         ).numpy()
         if "pdanse" in models_list
@@ -831,12 +831,12 @@ def test_on_ssm_model(
         )
         if "pf" in models_list
         else None,
-        X_est_SemiDANSE=torch.squeeze(
+        X_est_pDANSE=torch.squeeze(
             X_estimated_filtered_pdanse[figid_], 0
         ).numpy()
         if "pdanse" in models_list
         else None,
-        X_est_SemiDANSE_std=np.sqrt(
+        X_est_pDANSE_std=np.sqrt(
             torch.diagonal(
                 torch.squeeze(
                     Pk_estimated_filtered_pdanse[figid_, :, :, :], 0
@@ -889,12 +889,12 @@ def test_on_ssm_model(
                 torch.squeeze(Py_estimated_pred[0], 0), offset=0, dim1=1, dim2=2
             ).numpy()
         ),
-        Y_pred_SemiDANSE=torch.squeeze(
-            Y_estimated_pred_danse_semisupervised[0], 0
+        Y_pred_pDANSE=torch.squeeze(
+            Y_estimated_pred_pdanse[0], 0
         ).numpy(),
-        Y_pred_SemiDANSE_std=np.sqrt(
+        Y_pred_pDANSE_std=np.sqrt(
             torch.diagonal(
-                torch.squeeze(Py_estimated_pred_danse_semisupervised[0], 0),
+                torch.squeeze(Py_estimated_pred_pdanse[0], 0),
                 offset=0,
                 dim1=1,
                 dim2=2,
@@ -969,8 +969,7 @@ if __name__ == "__main__":
         # "danse": dict.fromkeys(smnr_dB_dict_arr, {}),
         # "kalmannet":dict.fromkeys(smnr_dB_dict_arr, {}),
         # "dmm_st-l":dict.fromkeys(smnr_dB_dict_arr, {}),
-        "danse_supervised":dict.fromkeys(smnr_dB_dict_arr, {}),
-        # "pdanse": dict.fromkeys(smnr_dB_dict_arr, {}),
+        #"danse_supervised":dict.fromkeys(smnr_dB_dict_arr, {}),
         "pdanse": dict.fromkeys(smnr_dB_dict_arr, {}),
     }
 
@@ -1001,7 +1000,7 @@ if __name__ == "__main__":
                 model_file_saved_dict[key][smnr_dB_label] = glob.glob(
                     "./models/*{}_{}_*nsup_{}_m_{}_n_{}_*T_{}_N_{}*sigmae2_{}dB_smnr_{}dB*/*best*".format(
                         ssmtype,
-                        "danse_semisupervised",
+                        "pdanse",
                         nsup,
                         m,
                         n,

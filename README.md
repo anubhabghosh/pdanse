@@ -6,6 +6,8 @@ This repository contains code related to the ICASSP 2025 paper:
 
 Authors: Anubhab Ghosh, Yonina C. Eldar and Saikat Chatterjee
 
+A copy of this repo is also present at: [https://github.com/SachLab/pDANSE-ICASSP2025](https://github.com/SachLab/pDANSE-ICASSP2025)
+
 ## Dependencies 
 It is recommended to build an environment either in [`pip`](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) or [`conda`](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) and install the following packages (I used `conda` as personal preference):
 - PyTorch (1.6.0)

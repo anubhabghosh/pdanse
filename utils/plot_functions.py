@@ -25,8 +25,8 @@ def plot_state_trajectory_w_lims(
     X_est_DANSE_std=None,
     X_est_DANSE_sup=None,
     X_est_DANSE_sup_std=None,
-    X_est_SemiDANSE=None,
-    X_est_SemiDANSE_std=None,
+    X_est_pDANSE=None,
+    X_est_pDANSE_std=None,
     X_est_DMM=None,
     X_est_DMM_std=None,
     X_est_KNET=None,
@@ -167,19 +167,19 @@ def plot_state_trajectory_w_lims(
                 facecolor="green",
                 alpha=0.4,
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             ax.plot(
-                X_est_SemiDANSE[T_start:T_end, idim],
+                X_est_pDANSE[T_start:T_end, idim],
                 "y-.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE}$",
+                label="$\\hat{\mathbf{x}}_{pDANSE}$",
                 lw=lw,
             )
             ax.fill_between(
-                np.arange(X_est_SemiDANSE[T_start:T_end, idim].shape[0]),
-                X_est_SemiDANSE[T_start:T_end, idim]
-                - sigma * X_est_SemiDANSE_std[T_start:T_end, idim],
-                X_est_SemiDANSE[T_start:T_end, idim]
-                + sigma * X_est_SemiDANSE_std[T_start:T_end, idim],
+                np.arange(X_est_pDANSE[T_start:T_end, idim].shape[0]),
+                X_est_pDANSE[T_start:T_end, idim]
+                - sigma * X_est_pDANSE_std[T_start:T_end, idim],
+                X_est_pDANSE[T_start:T_end, idim]
+                + sigma * X_est_pDANSE_std[T_start:T_end, idim],
                 facecolor="yellow",
                 alpha=0.4,
             )
@@ -452,19 +452,19 @@ def plot_state_trajectory_w_lims(
                 alpha=0.4,
             )
 
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             ax.plot(
-                X_est_SemiDANSE[T_start:T_end, idim],
+                X_est_pDANSE[T_start:T_end, idim],
                 "y-.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE}$",
+                label="$\\hat{\mathbf{x}}_{pDANSE}$",
                 lw=lw,
             )
             ax.fill_between(
-                np.arange(X_est_SemiDANSE[T_start:T_end, idim].shape[0]),
-                X_est_SemiDANSE[T_start:T_end, idim]
-                - sigma * X_est_SemiDANSE_std[T_start:T_end, idim],
-                X_est_SemiDANSE[T_start:T_end, idim]
-                + sigma * X_est_SemiDANSE_std[T_start:T_end, idim],
+                np.arange(X_est_pDANSE[T_start:T_end, idim].shape[0]),
+                X_est_pDANSE[T_start:T_end, idim]
+                - sigma * X_est_pDANSE_std[T_start:T_end, idim],
+                X_est_pDANSE[T_start:T_end, idim]
+                + sigma * X_est_pDANSE_std[T_start:T_end, idim],
                 facecolor="yellow",
                 alpha=0.4,
             )
@@ -519,8 +519,8 @@ def plot_meas_trajectory_w_lims(
     Y_pred_DANSE_std=None,
     Y_pred_DANSE_sup=None,
     Y_pred_DANSE_sup_std=None,
-    Y_pred_SemiDANSE=None,
-    Y_pred_SemiDANSE_std=None,
+    Y_pred_pDANSE=None,
+    Y_pred_pDANSE_std=None,
     Y_pred_DMM=None,
     Y_pred_DMM_std=None,
     Y_pred_KNET=None,
@@ -644,19 +644,19 @@ def plot_meas_trajectory_w_lims(
                     alpha=0.4,
                 )
 
-            if not Y_pred_SemiDANSE is None:
+            if not Y_pred_pDANSE is None:
                 ax.plot(
-                    Y_pred_SemiDANSE[T_start:T_end, idim],
+                    Y_pred_pDANSE[T_start:T_end, idim],
                     "y-.",
-                    label="$\\hat{\mathbf{y}}_{SemiDANSE}$",
+                    label="$\\hat{\mathbf{y}}_{pDANSE}$",
                     lw=lw,
                 )
                 ax.fill_between(
-                    np.arange(Y_pred_SemiDANSE[T_start:T_end, idim].shape[0]),
-                    Y_pred_SemiDANSE[T_start:T_end, idim]
-                    - sigma * Y_pred_SemiDANSE_std[T_start:T_end, idim],
-                    Y_pred_SemiDANSE[T_start:T_end, idim]
-                    + sigma * Y_pred_SemiDANSE_std[T_start:T_end, idim],
+                    np.arange(Y_pred_pDANSE[T_start:T_end, idim].shape[0]),
+                    Y_pred_pDANSE[T_start:T_end, idim]
+                    - sigma * Y_pred_pDANSE_std[T_start:T_end, idim],
+                    Y_pred_pDANSE[T_start:T_end, idim]
+                    + sigma * Y_pred_pDANSE_std[T_start:T_end, idim],
                     facecolor="yellow",
                     alpha=0.4,
                 )
@@ -810,19 +810,19 @@ def plot_meas_trajectory_w_lims(
                     alpha=0.4,
                 )
 
-            if not Y_pred_SemiDANSE is None:
+            if not Y_pred_pDANSE is None:
                 ax.plot(
-                    Y_pred_SemiDANSE[T_start:T_end, idim],
+                    Y_pred_pDANSE[T_start:T_end, idim],
                     "y-.",
-                    label="$\\hat{\mathbf{y}}_{SemiDANSE}$",
+                    label="$\\hat{\mathbf{y}}_{pDANSE}$",
                     lw=lw,
                 )
                 ax.fill_between(
-                    np.arange(Y_pred_SemiDANSE[T_start:T_end, idim].shape[0]),
-                    Y_pred_SemiDANSE[T_start:T_end, idim]
-                    - sigma * Y_pred_SemiDANSE_std[T_start:T_end, idim],
-                    Y_pred_SemiDANSE[T_start:T_end, idim]
-                    + sigma * Y_pred_SemiDANSE_std[T_start:T_end, idim],
+                    np.arange(Y_pred_pDANSE[T_start:T_end, idim].shape[0]),
+                    Y_pred_pDANSE[T_start:T_end, idim]
+                    - sigma * Y_pred_pDANSE_std[T_start:T_end, idim],
+                    Y_pred_pDANSE[T_start:T_end, idim]
+                    + sigma * Y_pred_pDANSE_std[T_start:T_end, idim],
                     facecolor="yellow",
                     alpha=0.4,
                 )
@@ -997,7 +997,7 @@ def plot_state_trajectory_axes(
     X_est_KNET=None,
     X_est_DANSE=None,
     X_est_DANSE_Supervised=None,
-    X_est_SemiDANSE=None,
+    X_est_pDANSE=None,
     X_est_DMM=None,
     savefig=False,
     savefig_name=None,
@@ -1023,11 +1023,11 @@ def plot_state_trajectory_axes(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Supervised} $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 0],
+                X_est_pDANSE[:T_end, 0],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 0], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
@@ -1061,11 +1061,11 @@ def plot_state_trajectory_axes(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Supervised} $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 1],
+                X_est_pDANSE[:T_end, 1],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 1], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
@@ -1121,11 +1121,11 @@ def plot_state_trajectory_axes(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Supervised} $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[T_start:T_end, 0],
+                X_est_pDANSE[T_start:T_end, 0],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(
@@ -1211,7 +1211,7 @@ def plot_state_trajectory_axes_all(
     X_est_KNET=None,
     X_est_DANSE=None,
     X_est_DANSE_Supervised=None,
-    X_est_SemiDANSE=None,
+    X_est_pDANSE=None,
     X_est_DMM=None,
     savefig=False,
     savefig_name=None,
@@ -1236,11 +1236,11 @@ def plot_state_trajectory_axes_all(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Sup.} $",
             )
-        if X_est_SemiDANSE is not None:
+        if X_est_pDANSE is not None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 0],
+                X_est_pDANSE[:T_end, 0],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 0], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
@@ -1286,11 +1286,11 @@ def plot_state_trajectory_axes_all(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Sup.} $",
             )
-        if X_est_SemiDANSE is not None:
+        if X_est_pDANSE is not None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 0],
+                X_est_pDANSE[:T_end, 0],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 0], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
@@ -1324,11 +1324,11 @@ def plot_state_trajectory_axes_all(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Sup.} $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 1],
+                X_est_pDANSE[:T_end, 1],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 1], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
@@ -1364,11 +1364,11 @@ def plot_state_trajectory_axes_all(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Sup.}  $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 0],
+                X_est_pDANSE[:T_end, 0],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 0], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
@@ -1402,11 +1402,11 @@ def plot_state_trajectory_axes_all(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Sup.} $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 1],
+                X_est_pDANSE[:T_end, 1],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 1], "g--.", label="$\\hat{\mathbf{x}}_{DMM}$")
@@ -1438,11 +1438,11 @@ def plot_state_trajectory_axes_all(
                 "m--",
                 label="$\\hat{\mathbf{x}}_{DANSE-Sup.} $",
             )
-        if not X_est_SemiDANSE is None:
+        if not X_est_pDANSE is None:
             plt.plot(
-                X_est_SemiDANSE[:T_end, 2],
+                X_est_pDANSE[:T_end, 2],
                 "y--.",
-                label="$\\hat{\mathbf{x}}_{SemiDANSE} $",
+                label="$\\hat{\mathbf{x}}_{pDANSE} $",
             )
         if not X_est_DMM is None:
             plt.plot(X_est_DMM[:T_end, 2], "g--.", label="$\\hat{\mathbf{x}}_{DMM} $")
