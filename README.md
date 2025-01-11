@@ -4,6 +4,10 @@ This repository contains code related to the ICASSP 2025 paper:
 
 *Particle-based Data-driven Nonlinear State Estimation of Model-free Process from Nonlinear Measurements*
 
+Brief description: *Particle DANSE (pDANSE) uses a system of particles (inspired by the well-known particle filter) and semi-supervised learning to tackle the problem of Bayesian state estimation with nonlinear, Gaussian measurements. Currently, the framework relies on the exact knowledge of the given nonlinearity and works with element-wise nonlinearities like the ReLU function. Future work will focus on extending this to unknown nonlinearities. Also, similar to its predecessor DANSE, pDANSE relies on the knowledge of the measurement noise covariance.*
+
+For more info, check out our paper: *Link to be posted soon*
+
 Authors: Anubhab Ghosh, Yonina C. Eldar and Saikat Chatterjee
 
 A copy of this repo is also present at: [https://github.com/SachLab/pDANSE-ICASSP2025](https://github.com/SachLab/pDANSE-ICASSP2025)
@@ -77,6 +81,10 @@ This would be the required organization of files and folders for reproducing res
 
 ````
 
+There are main functions and source code for implementing a few other methods like the unsupervised KalmanNet [(Revach et. al. 2022)](https://github.com/KalmanNet/Unsupervised_EUSIPCO_22), deep Markov model [(Krishnan et. al. 2017)](https://github.com/clinicalml/dmm) that can also be used for comparison. There is also a purely supervised version of DANSE trained with only the limited amount of labelled data in `/src/danse_supervised.py`. 
+
+Not relevant / Unused files: `/src/danse.py` (unsupervised DANSE using linear measurements), `/src/semidanse.py` (semi-supervised version of DANSE using linear measurements). 
+
 ## Brief outline of pDANSE training
 
 1. Generate data by calling `bin/generate_data.py`. This can be done in a simple manner by editing and calling the shell script `run_generate_data.sh`. Data gets stored at `data/synthetic_data/`. For e.g. to generate trajectory data with 1000 samples with each trajectory of length 100, from a Lorenz Attractor model (m=3, n=3), with $\sigma_{e}^{2}= -10$ dB, and $\text{SMNR}$ = $0$ dB, the syntax should be 
@@ -102,6 +110,5 @@ For the `datafile` and `splits` arguments:
 
 ## Evaluation
 
-Once files are created, the evaluation can be done by calling the script in `/tests/test_models_with_danse.py`. Paths to model files and log files should be edited in the script directly. The results can be visualized using Jupyter notebooks found in `analysis_ipynbs/`
+Once files are created, the evaluation can be done by calling the script in `/tests/test_models_with_danse.py`. Paths to model files and log files should be edited in the script directly. The figures are created in a separate folder, including some results stored in .json and .pt files. The results can be visualized using Jupyter notebooks found in `analysis_ipynbs/`.
 
-[ ] TODO: More updates to the repository description is in progress
