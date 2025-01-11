@@ -4,7 +4,7 @@ This repository contains code related to the ICASSP 2025 paper:
 
 *Particle-based Data-driven Nonlinear State Estimation of Model-free Process from Nonlinear Measurements*
 
-Brief description: *Particle DANSE (pDANSE) uses a system of particles (inspired by the well-known particle filter) and semi-supervised learning to tackle the problem of Bayesian state estimation with nonlinear, Gaussian measurements. Currently, the framework relies on the exact knowledge of the given nonlinearity and works with element-wise nonlinearities like the ReLU function. Future work will focus on extending this to unknown nonlinearities. Also, similar to its predecessor DANSE, pDANSE relies on the knowledge of the measurement noise covariance.*
+Brief description: *Particle DANSE (pDANSE) uses a system of particles (inspired by the well-known particle filter) and semi-supervised learning to tackle the problem of Bayesian state estimation with nonlinear, Gaussian measurements. Currently, the framework relies on the exact knowledge of the given nonlinearity and works with element-wise nonlinearities like the ReLU function. Future work will focus on extending this to unknown nonlinearities. Also, similar to its predecessor [DANSE](https://github.com/anubhabghosh/danse_jrnl), pDANSE relies on the knowledge of the measurement noise covariance.*
 
 For more info, check out our paper: *Link to be posted soon*
 
