@@ -6,7 +6,7 @@ This repository contains code related to the ICASSP 2025 paper:
 
 Brief description: *Particle DANSE (pDANSE) uses a system of particles (inspired by the well-known particle filter) and semi-supervised learning to tackle the problem of Bayesian state estimation with nonlinear, Gaussian measurements. Currently, the framework relies on the exact knowledge of the given nonlinearity and works with element-wise nonlinearities like the ReLU function. Future work will focus on extending this to unknown nonlinearities. Also, similar to its predecessor [DANSE](https://github.com/anubhabghosh/danse_jrnl), pDANSE relies on the knowledge of the measurement noise covariance.*
 
-For more info, check out our paper: *Link to be posted soon*
+For more info, check out our paper on IEEE [here](https://ieeexplore.ieee.org/abstract/document/10888810/)
 
 Authors: Anubhab Ghosh, Yonina C. Eldar and Saikat Chatterjee
 
@@ -111,4 +111,9 @@ For the `datafile` and `splits` arguments:
 ## Evaluation
 
 Once files are created, the evaluation can be done by calling the script in `/tests/test_models_with_danse.py`. Paths to model files and log files should be edited in the script directly. The figures are created in a separate folder, including some results stored in .json and .pt files. The results can be visualized using Jupyter notebooks found in `analysis_ipynbs/`.
+
+## Citation
+Please cite our paper if you compare with the method or use the code:
+
+*A. Ghosh, Y. C. Eldar and S. Chatterjee, "Particle-based Data-driven Nonlinear State Estimation of Model-free Process from Nonlinear Measurements," ICASSP 2025 - 2025 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), Hyderabad, India, 2025, pp. 1-5, doi: 10.1109/ICASSP49660.2025.10888810.*
 
